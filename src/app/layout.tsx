@@ -17,6 +17,12 @@ export default function RootLayout({
     <html lang="uk">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#4A5688" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="RoadSync" />
+        <link rel="apple-touch-icon" href="/icon-192x192.png" />
+        <script dangerouslySetInnerHTML={{__html: `if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js'); }); }`}} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
