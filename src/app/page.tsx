@@ -96,29 +96,25 @@ export default function Home() {
               </Carousel>
             </div>
 
-            {activeSlide === 0 && (
-              <>
-                <ActionDialog
-                  open={isActionDialogOpen}
-                  onOpenChange={setIsActionDialogOpen}
-                  cadence={activeCadence}
-                />
-                <div className="fixed bottom-4 right-4 z-20">
-                  <Button
-                    size="icon"
-                    className="h-14 w-14 rounded-full shadow-lg"
-                    style={{
-                      background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))',
-                      color: 'hsl(var(--accent-foreground))',
-                    }}
-                    onClick={() => setIsActionDialogOpen(true)}
-                    aria-label="Додати нову дію"
-                  >
-                    <Plus className="h-8 w-8" />
-                  </Button>
-                </div>
-              </>
-            )}
+            <ActionDialog
+                open={isActionDialogOpen}
+                onOpenChange={setIsActionDialogOpen}
+                cadence={activeCadence}
+              />
+              <div className="fixed bottom-4 right-4 z-20">
+                <Button
+                  size="icon"
+                  className="h-14 w-14 rounded-full shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))',
+                    color: 'hsl(var(--accent-foreground))',
+                  }}
+                  onClick={() => setIsActionDialogOpen(true)}
+                  aria-label="Додати нову дію"
+                >
+                  <Plus className="h-8 w-8" />
+                </Button>
+              </div>
           </>
         )}
       </main>

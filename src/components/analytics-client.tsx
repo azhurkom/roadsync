@@ -1,10 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { BarChart, Fuel, Gauge, GaugeCircle, Wallet, Scale, Droplets, Calendar as CalendarIcon, MapPin, Plus } from 'lucide-react';
+import { BarChart, Fuel, Gauge, GaugeCircle, Wallet, Scale, Droplets, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import ActionDialog from '@/components/action-dialog';
 import { useApi } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
 import type { Cadence, ActionLog, Expense } from '@/lib/types';
@@ -29,7 +28,6 @@ const parseDrivingTime = (s?: string): number => {
 };
 
 export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
-  const [isActionDialogOpen, setIsActionDialogOpen] = React.useState(false);
   const { user } = useUser();
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
@@ -170,25 +168,6 @@ export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
           </CardContent>
         </Card>
       </>)}
-      <ActionDialog
-        open={isActionDialogOpen}
-        onOpenChange={setIsActionDialogOpen}
-        cadence={cadence}
-      />
-      <div className="fixed bottom-4 right-4 z-20">
-        <Button
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-lg"
-          style={{
-            background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))',
-            color: 'hsl(var(--accent-foreground))',
-          }}
-          onClick={() => setIsActionDialogOpen(true)}
-          aria-label="Додати нову дію"
-        >
-          <Plus className="h-8 w-8" />
-        </Button>
-      </div>
     </div>
   );
 }
