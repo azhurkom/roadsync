@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Copy, Route, Download, Upload, Search, Calendar as CalendarIcon, Pencil, PlusCircle, Trash2, CheckCircle2, Lock, RotateCcw, Plus } from 'lucide-react';
-import { ActionDialog } from '@/components/action-dialog';
+import ActionDialog from '@/components/action-dialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';

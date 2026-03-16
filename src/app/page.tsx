@@ -75,7 +75,7 @@ export default function Home() {
             <div className="w-full h-full" onClick={handleContainerClick}>
               <Carousel
                 setApi={setApi}
-                opts={{ loop: true, draggable: false }}
+                opts={{ loop: true, watchDrag: false }}
                 className="w-full h-full"
               >
                 <CarouselContent className="-ml-0 h-full">

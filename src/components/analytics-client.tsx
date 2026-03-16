@@ -4,7 +4,7 @@ import * as React from 'react';
 import { BarChart, Fuel, Gauge, GaugeCircle, Wallet, Scale, Droplets, Calendar as CalendarIcon, MapPin, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { ActionDialog } from '@/components/action-dialog';
+import ActionDialog from '@/components/action-dialog';
 import { useApi } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
 import type { Cadence, ActionLog, Expense } from '@/lib/types';
