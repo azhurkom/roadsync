@@ -148,7 +148,7 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
         setApi={setApi}
         opts={{ 
             loop: true,
-            draggable: false
+            watchDrag: false
         }} 
         className="w-full"
       >
