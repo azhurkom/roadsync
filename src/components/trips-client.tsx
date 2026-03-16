@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Loader2, Copy, Route, Download, Upload, Search, Calendar as CalendarIcon, Pencil, PlusCircle, Trash2, CheckCircle2, Lock, RotateCcw } from 'lucide-react';
+import { Loader2, Copy, Route, Download, Upload, Search, Calendar as CalendarIcon, Pencil, PlusCircle, Trash2, CheckCircle2, Lock, RotateCcw, Plus } from 'lucide-react';
+import { ActionDialog } from '@/components/action-dialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -128,6 +129,7 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
   const [sortOrder, setSortOrder] = React.useState<'newest'|'oldest'|'status'>('newest');
   const [date, setDate] = React.useState<DateRange|undefined>(undefined);
   const [editingTrip, setEditingTrip] = React.useState<Trip|null>(null);
+  const [isActionDialogOpen, setIsActionDialogOpen] = React.useState(false);
 
   const addressMap = React.useMemo(() => {
     const map = new Map<string, Address>();
@@ -299,6 +301,26 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
           )}
         </DialogContent>
       </Dialog>
+
+      <ActionDialog
+        open={isActionDialogOpen}
+        onOpenChange={setIsActionDialogOpen}
+        cadence={cadence}
+      />
+      <div className="fixed bottom-4 right-4 z-20">
+        <Button
+          size="icon"
+          className="h-14 w-14 rounded-full shadow-lg"
+          style={{
+            background: 'linear-gradient(135deg, hsl(var(--accent)), hsl(var(--primary)))',
+            color: 'hsl(var(--accent-foreground))',
+          }}
+          onClick={() => setIsActionDialogOpen(true)}
+          aria-label="Додати нову дію"
+        >
+          <Plus className="h-8 w-8" />
+        </Button>
+      </div>
     </div>
   );
 }

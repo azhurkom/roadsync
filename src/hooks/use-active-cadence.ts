@@ -9,8 +9,7 @@ export function useActiveCadence() {
   const { user, isUserLoading } = useUser();
 
   const { data, isLoading, error, refetch } = useApi<Cadence[]>(
-    user ? '/api/cadences?active=true' : null,
-    { refreshInterval: 10000 }
+    user ? '/api/cadences?active=true' : null
   );
 
   const activeCadence = useMemo(() => {

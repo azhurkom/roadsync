@@ -177,26 +177,7 @@ export default function Header() {
                 <BookUser className="mr-2 h-4 w-4" />
                 <span>Адресна книга</span>
               </DropdownMenuItem>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={isExporting}>
-                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                    <span>Експортувати дані</span>
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Підтвердження експорту</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Буде створено CSV-файл з усією інформацією з вашого журналу.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Відміна</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleExport}>Так, експортувати</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+
               <DropdownMenuItem onClick={() => router.push('/settings')}>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Налаштування</span>

@@ -10,8 +10,7 @@ export function useAllTrips(cadenceId: string | undefined) {
   const { user } = useUser();
 
   const { data, isLoading, error, refetch } = useApi<Trip[]>(
-    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null,
-    { refreshInterval: 10000 }
+    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null
   );
 
   return { trips: data, isLoading, error, refetch };
@@ -22,8 +21,7 @@ export function useTrips(cadenceId: string | undefined) {
   const { user } = useUser();
 
   const { data, isLoading, error, refetch } = useApi<Trip[]>(
-    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null,
-    { refreshInterval: 10000 }
+    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null
   );
 
   const activeTrips = useMemo(() => {
@@ -41,8 +39,7 @@ export function useLatestTrip(cadenceId: string | undefined) {
   const { user } = useUser();
 
   const { data, isLoading, error } = useApi<Trip[]>(
-    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null,
-    { refreshInterval: 10000 }
+    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null
   );
 
   const latestTrip = useMemo(() => {
