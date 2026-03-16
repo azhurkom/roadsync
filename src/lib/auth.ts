@@ -4,6 +4,7 @@ import PostgresAdapter from '@auth/pg-adapter';
 import pool from '@/lib/db';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   adapter: PostgresAdapter(pool),
   providers: [
     Google({

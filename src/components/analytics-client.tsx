@@ -34,10 +34,10 @@ export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
   const { data: actionLogs, isLoading: loadingActions } = useApi<ActionLog[]>(
-    user ? `/api/action-logs?cadenceId=${cadence.id}&limit=1000` : null, { refreshInterval: 30000 }
+    user ? `/api/action-logs?cadenceId=${cadence.id}&limit=1000` : null
   );
   const { data: expenses, isLoading: loadingExpenses } = useApi<Expense[]>(
-    user ? `/api/expenses?cadenceId=${cadence.id}` : null, { refreshInterval: 30000 }
+    user ? `/api/expenses?cadenceId=${cadence.id}` : null
   );
 
   const analyticsData = React.useMemo(() => {

@@ -112,12 +112,10 @@ export default function ActivityFeed({ cadenceId }: ActivityFeedProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
   const { data: actionLogs, isLoading: loadingActions } = useApi<ActionLog[]>(
-    user ? `/api/action-logs?cadenceId=${cadenceId}&limit=50` : null,
-    { refreshInterval: 8000 }
+    user ? `/api/action-logs?cadenceId=${cadenceId}&limit=50` : null
   );
   const { data: expenses, isLoading: loadingExpenses } = useApi<Expense[]>(
-    user ? `/api/expenses?cadenceId=${cadenceId}` : null,
-    { refreshInterval: 8000 }
+    user ? `/api/expenses?cadenceId=${cadenceId}` : null
   );
 
   const combinedFeed = React.useMemo(() => {
