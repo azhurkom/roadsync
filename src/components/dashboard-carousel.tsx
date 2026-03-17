@@ -173,41 +173,35 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
                         <>
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-muted-foreground">Зміна закінчується</p>
-                            <p className="text-xs font-medium text-muted-foreground">{Math.max(0, 3 - shortRestCount)} з 3</p>
+                            <p className="text-sm font-bold text-primary">{Math.max(0, 3 - shortRestCount)} з 3</p>
                           </div>
                           <div className="flex gap-4 mt-1">
                             <div>
-                              <p className="text-xs text-muted-foreground">через 13 годин ✅</p>
+                              <p className="text-xs text-muted-foreground">через 13 годин</p>
                               <p className="text-xl font-bold font-headline tabular-nums">{addHours(activeShiftStartTime, 13)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground">через 15 годин ⚠️</p>
+                              <p className="text-xs text-muted-foreground">через 15 годин</p>
                               <p className="text-xl font-bold font-headline tabular-nums">{addHours(activeShiftStartTime, 15)}</p>
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Початок зміни: {activeShiftStartTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
                         </>
                       ) : lastShiftEndTime ? (
                         <>
                           <div className="flex items-center justify-between">
                             <p className="text-sm text-muted-foreground">Початок зміни</p>
-                            <p className="text-xs font-medium text-muted-foreground">{Math.max(0, 3 - shortRestCount)} з 3</p>
+                            <p className="text-sm font-bold text-primary">{Math.max(0, 3 - shortRestCount)} з 3</p>
                           </div>
                           <div className="flex gap-4 mt-1">
                             <div>
-                              <p className="text-xs text-muted-foreground">через 9 годин ⚠️</p>
+                              <p className="text-xs text-muted-foreground">через 9 годин</p>
                               <p className="text-xl font-bold font-headline tabular-nums">{addHours(lastShiftEndTime, 9)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground">через 11 годин ✅</p>
+                              <p className="text-xs text-muted-foreground">через 11 годин</p>
                               <p className="text-xl font-bold font-headline tabular-nums">{addHours(lastShiftEndTime, 11)}</p>
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Кінець зміни: {lastShiftEndTime.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
                         </>
                       ) : null}
                     </div>
