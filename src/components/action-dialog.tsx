@@ -376,9 +376,28 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   const oldestTrip = React.useMemo(() => trips?.[0] ?? null, [trips]);
   const selectedTripId = oldestTrip?.id || '';
 
+  const { data: allLogs } = useApi<any[]>(`/api/action-logs?cadenceId=${cadence.id}&limit=200`);
+
+  const prevTrailerNumbers = React.useMemo(() => {
+    if (!allLogs) return [];
+    const nums = new Set<string>();
+    allLogs.forEach(l => { if (l.newTrailerNumber) nums.add(l.newTrailerNumber); });
+    if (cadence.trailerNumber) nums.add(cadence.trailerNumber);
+    return Array.from(nums);
+  }, [allLogs, cadence.trailerNumber]);
+
+  const prevVehicleNumbers = React.useMemo(() => {
+    if (!allLogs) return [];
+    const nums = new Set<string>();
+    allLogs.forEach(l => { if (l.newVehicleNumber) nums.add(l.newVehicleNumber); });
+    if (cadence.vehicleNumber) nums.add(cadence.vehicleNumber);
+    return Array.from(nums);
+  }, [allLogs, cadence.vehicleNumber]);
+
   const [actionType, setActionType] = React.useState<ActionType | ''>('');
   const [weight, setWeight] = React.useState('');
   const [newNumber, setNewNumber] = React.useState('');
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [notes, setNotes] = React.useState('');
   const [tachographData, setTachographData] = React.useState<TachographData | null>(null);
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
@@ -412,7 +431,10 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
     if (!tachographData?.odometer || !actionType) {
       toast({ variant: 'destructive', title: 'Помилка', description: 'Будь ласка, заповніть дані тахографа та виберіть дію.' }); return;
     }
-    if (!selectedTripId) { toast({ variant: 'destructive', title: 'Помилка', description: 'Немає активного рейсу.' }); return; }
+    const isVehicleAction = actionType === 'trailer-change' || actionType === 'vehicle-change';
+    if (!selectedTripId && !isVehicleAction) {
+      toast({ variant: 'destructive', title: 'Помилка', description: 'Немає активного рейсу.' }); return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -424,7 +446,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         locationLongitude: tachographData.coords?.lon || 0,
         locationName: tachographData.location,
         actionType,
-        tripId: selectedTripId,
+        ...(selectedTripId && { tripId: selectedTripId }),
         ...(weight && { weight: Number(weight) }),
         ...(notes && { notes }),
         ...(fileUrl && { fileUrl }),
@@ -464,14 +486,16 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   return (
     <form onSubmit={handleSubmit} className="space-y-1 pt-1">
       <TachographInput onDataExtracted={setTachographData} />
-      <div className="space-y-1">
-        <Label>Рейс</Label>
-        <div className="flex flex-col justify-center rounded-md border border-input bg-muted px-3 py-1.5 text-sm min-h-[36px]">
-          {areTripsLoading ? <span className="text-muted-foreground">Завантаження...</span>
-            : oldestTrip ? (<><span className="font-bold text-foreground truncate">{oldestTrip.id}</span><span className="text-xs text-muted-foreground truncate">{oldestTrip.description}</span></>)
-            : <span className="text-muted-foreground">Немає активних рейсів</span>}
+      {(actionType === 'loading' || actionType === 'unloading' || actionType === '') && (
+        <div className="space-y-1">
+          <Label>Рейс</Label>
+          <div className="flex flex-col justify-center rounded-md border border-input bg-muted px-3 py-1.5 text-sm min-h-[36px]">
+            {areTripsLoading ? <span className="text-muted-foreground">Завантаження...</span>
+              : oldestTrip ? (<><span className="font-bold text-foreground truncate">{oldestTrip.id}</span><span className="text-xs text-muted-foreground truncate">{oldestTrip.description}</span></>)
+              : <span className="text-muted-foreground">Немає активних рейсів</span>}
+          </div>
         </div>
-      </div>
+      )}
       <div className="space-y-1">
         <Label htmlFor="action-type">Дія</Label>
         <Select onValueChange={(v: ActionType) => setActionType(v)} value={actionType}>
@@ -485,12 +509,39 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
           <Input id="weight" type="number" placeholder="напр., 22000" max="26000" value={weight} onChange={e => setWeight(e.target.value)} className="h-8" />
         </div>
       )}
-      {(actionType === 'trailer-change' || actionType === 'vehicle-change') && (
-        <div className="space-y-1">
-          <Label htmlFor="new-number">{actionType === 'trailer-change' ? 'Новий номер причепа' : 'Новий номер авто'}</Label>
-          <Input id="new-number" placeholder="Введіть новий номер" value={newNumber} onChange={e => setNewNumber(e.target.value)} className="h-8" />
-        </div>
-      )}
+      {(actionType === 'trailer-change' || actionType === 'vehicle-change') && (() => {
+        const suggestions = (actionType === 'trailer-change' ? prevTrailerNumbers : prevVehicleNumbers)
+          .filter(n => n !== (actionType === 'trailer-change' ? cadence.trailerNumber : cadence.vehicleNumber))
+          .filter(n => n.toLowerCase().includes(newNumber.toLowerCase()));
+        return (
+          <div className="space-y-1 relative">
+            <Label htmlFor="new-number">{actionType === 'trailer-change' ? 'Новий номер причепа' : 'Новий номер авто'}</Label>
+            <Input
+              id="new-number"
+              placeholder="Введіть або виберіть номер"
+              value={newNumber}
+              onChange={e => { setNewNumber(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              className="h-8"
+              autoComplete="off"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 rounded-md border border-input bg-popover shadow-md">
+                {suggestions.map(n => (
+                  <div
+                    key={n}
+                    className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                    onMouseDown={() => { setNewNumber(n); setShowSuggestions(false); }}
+                  >
+                    {n}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
       <div className="space-y-1">
         <Label htmlFor="notes">Нотатки</Label>
         <Input id="notes" placeholder="напр., CMR #12345" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
@@ -502,7 +553,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         </div>
       )}
       <PhotoInput onFileUploaded={setFileUrl} promptText="Додати фото документа" />
-      <Button type="submit" className="w-full h-9" disabled={isSubmitting || !selectedTripId}>
+      <Button type="submit" className="w-full h-9" disabled={isSubmitting || (!selectedTripId && actionType !== 'trailer-change' && actionType !== 'vehicle-change')}>
         {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Записати дію'}
       </Button>
     </form>
