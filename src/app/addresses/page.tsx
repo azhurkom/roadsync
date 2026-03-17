@@ -51,6 +51,44 @@ function parseCoords(str: string | undefined | null): { lat?: number; lon?: numb
   return { lat, lon };
 }
 
+function ComboInput({ placeholder, value, onChange, suggestions }: {
+  placeholder?: string;
+  value: string;
+  onChange: (val: string) => void;
+  suggestions: string[];
+}) {
+  const [open, setOpen] = React.useState(false);
+  const filtered = suggestions.filter(s => s && s.toLowerCase().includes(value.toLowerCase()) && s !== value);
+  const uid = React.useId();
+
+  return (
+    <div className="relative">
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        autoComplete="new-password"
+        name={uid}
+      />
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 rounded-md border border-input bg-popover shadow-md max-h-48 overflow-y-auto">
+          {filtered.map((s, i) => (
+            <div
+              key={i}
+              className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground truncate"
+              onMouseDown={() => { onChange(s); setOpen(false); }}
+            >
+              {s}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddressesHeader() {
   const router = useRouter();
   return (
@@ -61,7 +99,7 @@ function AddressesHeader() {
   );
 }
 
-function EditAddressForm({ address, onFinished }: { address: Address; onFinished: () => void }) {
+function EditAddressForm({ address, onFinished, addresses }: { address: Address; onFinished: () => void; addresses: Address[] }) {
   const { toast } = useToast();
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
@@ -118,13 +156,13 @@ function EditAddressForm({ address, onFinished }: { address: Address; onFinished
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <FormField control={form.control} name="name" render={({ field }) => (
-          <FormItem><FormLabel>Назва / Компанія</FormLabel><FormControl><Input placeholder="напр., Склад Amazon" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Назва / Компанія</FormLabel><FormControl><ComboInput placeholder="напр., Склад Amazon" value={field.value} onChange={field.onChange} suggestions={addresses.filter(a=>a.id!==address.id).map(a=>a.name)} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="address" render={({ field }) => (
-          <FormItem><FormLabel>Повна адреса</FormLabel><FormControl><Input placeholder="Країна, місто, вулиця, номер будинку" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Повна адреса</FormLabel><FormControl><ComboInput placeholder="Країна, місто, вулиця, номер будинку" value={field.value} onChange={field.onChange} suggestions={addresses.filter(a=>a.id!==address.id).map(a=>a.address)} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="notes" render={({ field }) => (
-          <FormItem><FormLabel>Нотатки</FormLabel><FormControl><Textarea placeholder="напр., Час роботи" {...field} /></FormControl><FormMessage /></FormItem>
+          <FormItem><FormLabel>Нотатки</FormLabel><FormControl><ComboInput placeholder="напр., Час роботи" value={field.value||''} onChange={field.onChange} suggestions={[...new Set(addresses.filter(a=>a.id!==address.id&&a.notes).map(a=>a.notes!))]} /></FormControl><FormMessage /></FormItem>
         )} />
         <FormField control={form.control} name="entryCoordinates" render={({ field }) => (
           <FormItem><FormLabel>Координати заїзду (опціонально)</FormLabel><FormControl><Input placeholder="напр., 50.4501,30.5234" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -138,7 +176,7 @@ function EditAddressForm({ address, onFinished }: { address: Address; onFinished
   );
 }
 
-function AddressCard({ address, onRefetch }: { address: Address; onRefetch: () => void }) {
+function AddressCard({ address, onRefetch, addresses }: { address: Address; onRefetch: () => void; addresses: Address[] }) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
@@ -164,7 +202,7 @@ function AddressCard({ address, onRefetch }: { address: Address; onRefetch: () =
             <DialogTrigger asChild><Button variant="ghost" size="icon"><Pencil className="h-4 w-4"/></Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Редагувати адресу</DialogTitle></DialogHeader>
-              <EditAddressForm address={address} onFinished={() => { setIsEditOpen(false); onRefetch(); }} />
+              <EditAddressForm address={address} onFinished={() => { setIsEditOpen(false); onRefetch(); }} addresses={addresses} />
             </DialogContent>
           </Dialog>
           <AlertDialog>
@@ -302,13 +340,13 @@ export default function AddressesPage() {
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                 <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Назва / Компанія</FormLabel><FormControl><Input placeholder="напр., Склад Amazon" {...field}/></FormControl><FormMessage/></FormItem>
+                  <FormItem><FormLabel>Назва / Компанія</FormLabel><FormControl><ComboInput placeholder="напр., Склад Amazon" value={field.value} onChange={field.onChange} suggestions={(addresses||[]).map(a=>a.name)} /></FormControl><FormMessage/></FormItem>
                 )}/>
                 <FormField control={form.control} name="address" render={({ field }) => (
-                  <FormItem><FormLabel>Повна адреса</FormLabel><FormControl><Input placeholder="Країна, місто, вулиця, номер будинку" {...field}/></FormControl><FormMessage/></FormItem>
+                  <FormItem><FormLabel>Повна адреса</FormLabel><FormControl><ComboInput placeholder="Країна, місто, вулиця, номер будинку" value={field.value} onChange={field.onChange} suggestions={(addresses||[]).map(a=>a.address)} /></FormControl><FormMessage/></FormItem>
                 )}/>
                 <FormField control={form.control} name="notes" render={({ field }) => (
-                  <FormItem><FormLabel>Нотатки</FormLabel><FormControl><Textarea placeholder="напр., Час роботи, контактна особа" {...field}/></FormControl><FormMessage/></FormItem>
+                  <FormItem><FormLabel>Нотатки</FormLabel><FormControl><ComboInput placeholder="напр., Час роботи, контактна особа" value={field.value||''} onChange={field.onChange} suggestions={[...new Set((addresses||[]).filter(a=>a.notes).map(a=>a.notes!))]} /></FormControl><FormMessage/></FormItem>
                 )}/>
                 <FormField control={form.control} name="entryCoordinates" render={({ field }) => (
                   <FormItem><FormLabel>Координати заїзду (опціонально)</FormLabel><FormControl><Input placeholder="напр., 50.4501,30.5234" {...field} value={field.value ?? ''}/></FormControl><FormMessage/></FormItem>
@@ -342,7 +380,7 @@ export default function AddressesPage() {
           {!areAddressesLoading && processedAddresses.length === 0 && (
             <p className="text-muted-foreground text-center py-4">{searchTerm ? 'Не знайдено адрес за вашим запитом.' : 'У вас ще немає збережених адрес.'}</p>
           )}
-          {processedAddresses.map(addr => <AddressCard key={addr.id} address={addr} onRefetch={refetch}/>)}
+          {processedAddresses.map(addr => <AddressCard key={addr.id} address={addr} onRefetch={refetch} addresses={addresses||[]}/>)}
         </div>
       </main>
     </div>
