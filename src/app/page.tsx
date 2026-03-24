@@ -13,6 +13,7 @@ import AnalyticsClient from '@/components/analytics-client';
 import TripsClient from '@/components/trips-client';
 import CadenceManager from '@/components/cadence-manager';
 import ActionDialog from '@/components/action-dialog';
+import { ActivityRefetchProvider } from '@/hooks/use-activity-refetch';
 import { Button } from '@/components/ui/button';
 
 import {
@@ -63,6 +64,7 @@ export default function Home() {
   }
 
   return (
+    <ActivityRefetchProvider>
     <div className="flex flex-col h-dvh bg-background">
       <Header />
       <main className="flex-1 min-h-0 relative">
@@ -119,5 +121,6 @@ export default function Home() {
         )}
       </main>
     </div>
+    </ActivityRefetchProvider>
   );
 }

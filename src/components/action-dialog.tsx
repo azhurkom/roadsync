@@ -14,6 +14,7 @@ import TachographInput from './tachograph-input';
 import PhotoInput from './photo-input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
+import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 import { useShiftStatus } from '@/hooks/use-shift-status';
 import { useTrips } from '@/hooks/use-trips';
 import { useApi, apiMutate } from '@/hooks/use-api';
@@ -563,11 +564,16 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
 // ─── Main ActionDialog ────────────────────────────────────────────────────────
 export default function ActionDialog({ open, onOpenChange, cadence }: ActionDialogProps) {
   const [view, setView] = React.useState<'main' | 'shift' | 'expense' | 'trip' | 'new-trip'>('main');
+  const { refetch: refetchActivityFeed } = useActivityRefetch();
 
   React.useEffect(() => { if (open) setView('main'); }, [open]);
 
   const closeDialog = () => onOpenChange(false);
-  const handleFinished = () => { closeDialog(); setTimeout(() => setView('main'), 300); };
+  const handleFinished = () => {
+    closeDialog();
+    refetchActivityFeed();
+    setTimeout(() => setView('main'), 300);
+  };
 
   const renderContent = () => {
     switch (view) {

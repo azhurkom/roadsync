@@ -16,6 +16,7 @@ import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { cn } from '@/lib/utils';
+import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 
 interface ActivityFeedProps { cadenceId: string; }
 
@@ -108,15 +109,23 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
 
 export default function ActivityFeed({ cadenceId }: ActivityFeedProps) {
   const { user } = useUser();
+  const { register } = useActivityRefetch();
   const [filter, setFilter] = React.useState<'all' | 'shift' | 'trip' | 'expense' | 'service'>('all');
   const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 
-  const { data: actionLogs, isLoading: loadingActions } = useApi<ActionLog[]>(
+  const { data: actionLogs, isLoading: loadingActions, refetch: refetchLogs } = useApi<ActionLog[]>(
     user ? `/api/action-logs?cadenceId=${cadenceId}&limit=50` : null
   );
-  const { data: expenses, isLoading: loadingExpenses } = useApi<Expense[]>(
+  const { data: expenses, isLoading: loadingExpenses, refetch: refetchExpenses } = useApi<Expense[]>(
     user ? `/api/expenses?cadenceId=${cadenceId}` : null
   );
+
+  React.useEffect(() => {
+    register(() => {
+      refetchLogs();
+      refetchExpenses();
+    });
+  }, [register, refetchLogs, refetchExpenses]);
 
   const combinedFeed = React.useMemo(() => {
     const actions = (actionLogs || []).map(log => ({ ...log, recordType: 'action' as const }));
