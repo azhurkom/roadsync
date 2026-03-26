@@ -411,7 +411,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
     if (actionType !== 'trailer-change' && actionType !== 'vehicle-change') setNewNumber('');
 
     const checkLastUnload = async () => {
-      if (actionType === 'unloading' && selectedTripId) {
+      if (actionType === 'unloading' && selectedTripId && !areTripsLoading) {
         const tripsRes = await fetch(`/api/trips?cadenceId=${cadence.id}`);
         const allTrips: Trip[] = await tripsRes.json();
         const trip = allTrips.find(t => t.id === selectedTripId);
@@ -419,13 +419,13 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         const logsRes = await fetch(`/api/action-logs?cadenceId=${cadence.id}&tripId=${selectedTripId}&limit=200`);
         const logs = await logsRes.json();
         const unloadCount = logs.filter((l: any) => l.actionType === 'unloading').length;
-        if (unloadCount + 1 >= (trip.unloadAddresses?.length || 0)) {
+        if (unloadCount + 1 >= (trip.unloadAddresses?.length || 1)) {
           setIsLastUnload(true); setShouldCloseTrip(true);
         } else { setIsLastUnload(false); }
       } else { setIsLastUnload(false); }
     };
     checkLastUnload();
-  }, [actionType, selectedTripId, cadence.id]);
+  }, [actionType, selectedTripId, cadence.id, areTripsLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

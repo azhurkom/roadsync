@@ -21,7 +21,8 @@ export function useTrips(cadenceId: string | undefined) {
   const { user } = useUser();
 
   const { data, isLoading, error, refetch } = useApi<Trip[]>(
-    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null
+    user && cadenceId ? `/api/trips?cadenceId=${cadenceId}` : null,
+    { refreshInterval: 10000 }
   );
 
   const activeTrips = useMemo(() => {
