@@ -15,7 +15,7 @@ export function useShiftStatus(cadenceId: string | undefined) {
 
   const { data: recentActionLogs, isLoading } = useApi<ActionLog[]>(
     user && cadenceId ? `/api/action-logs?cadenceId=${cadenceId}&limit=200` : null,
-    { refreshInterval: 8000 }
+    { refreshInterval: 8000, cacheKey: `shift-status-${cadenceId}`, staleTime: 15000 }
   );
 
   const shiftStatus = useMemo(() => {

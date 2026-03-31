@@ -157,7 +157,8 @@ export default function ActivityFeed({ cadenceId }: ActivityFeedProps) {
     return items;
   }, [combinedFeed, filter, date]);
 
-  const isLoading = loadingActions || loadingExpenses;
+  const isFirstLoad = (loadingActions && !actionLogs) || (loadingExpenses && !expenses);
+  const isLoading = isFirstLoad;
 
   return (
     <Card>
