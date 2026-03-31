@@ -9,12 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { Textarea } from './ui/textarea';
-import type { ActionType, ExpenseType, PaymentMethod, Trip, Address, Cadence } from '@/lib/types';
+import type { ActionType, ExpenseType, PaymentMethod, Trip, Address, Cadence, ActionLog } from '@/lib/types';
 import TachographInput from './tachograph-input';
 import PhotoInput from './photo-input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/hooks/use-user';
-import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 import { useShiftStatus } from '@/hooks/use-shift-status';
 import { useTrips } from '@/hooks/use-trips';
 import { useApi, apiMutate } from '@/hooks/use-api';
@@ -72,8 +71,9 @@ function NewTripForm({ cadenceId, onFinished }: { cadenceId: string; onFinished:
       setLoadAddresses(result.loadAddresses.length > 0 ? result.loadAddresses : ['']);
       setUnloadAddresses(result.unloadAddresses.length > 0 ? result.unloadAddresses : ['']);
       toast({ title: 'Дані розпізнано!', description: 'Перевірте та за потреби виправте поля.' });
-    } catch (error: any) {
-      const is429 = error?.message?.includes('429') || error?.message?.includes('Quota');
+    } catch (error: unknown) {
+      const err = error as Error;
+      const is429 = err?.message?.includes('429') || err?.message?.includes('Quota');
       toast({ variant: 'destructive', title: 'Помилка розпізнавання', description: is429 ? 'Перевищено ліміт запитів до AI. Зачекайте хвилину.' : 'Не вдалося розпізнати дані.' });
     } finally {
       setIsParsing(false);
@@ -146,8 +146,9 @@ function NewTripForm({ cadenceId, onFinished }: { cadenceId: string; onFinished:
       });
       toast({ title: 'Успіх!', description: `Рейс ${newTripId} було створено.` });
       onFinished();
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Помилка створення рейсу', description: err.message });
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast({ variant: 'destructive', title: 'Помилка створення рейсу', description: error.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -377,28 +378,9 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   const oldestTrip = React.useMemo(() => trips?.[0] ?? null, [trips]);
   const selectedTripId = oldestTrip?.id || '';
 
-  const { data: allLogs } = useApi<any[]>(`/api/action-logs?cadenceId=${cadence.id}&limit=200`);
-
-  const prevTrailerNumbers = React.useMemo(() => {
-    if (!allLogs) return [];
-    const nums = new Set<string>();
-    allLogs.forEach(l => { if (l.newTrailerNumber) nums.add(l.newTrailerNumber); });
-    if (cadence.trailerNumber) nums.add(cadence.trailerNumber);
-    return Array.from(nums);
-  }, [allLogs, cadence.trailerNumber]);
-
-  const prevVehicleNumbers = React.useMemo(() => {
-    if (!allLogs) return [];
-    const nums = new Set<string>();
-    allLogs.forEach(l => { if (l.newVehicleNumber) nums.add(l.newVehicleNumber); });
-    if (cadence.vehicleNumber) nums.add(cadence.vehicleNumber);
-    return Array.from(nums);
-  }, [allLogs, cadence.vehicleNumber]);
-
   const [actionType, setActionType] = React.useState<ActionType | ''>('');
   const [weight, setWeight] = React.useState('');
   const [newNumber, setNewNumber] = React.useState('');
-  const [showSuggestions, setShowSuggestions] = React.useState(false);
   const [notes, setNotes] = React.useState('');
   const [tachographData, setTachographData] = React.useState<TachographData | null>(null);
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
@@ -411,35 +393,32 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
     if (actionType !== 'trailer-change' && actionType !== 'vehicle-change') setNewNumber('');
 
     const checkLastUnload = async () => {
-      if (actionType === 'unloading' && selectedTripId && !areTripsLoading) {
+      if (actionType === 'unloading' && selectedTripId) {
         const tripsRes = await fetch(`/api/trips?cadenceId=${cadence.id}`);
         const allTrips: Trip[] = await tripsRes.json();
         const trip = allTrips.find(t => t.id === selectedTripId);
         if (!trip) return;
         const logsRes = await fetch(`/api/action-logs?cadenceId=${cadence.id}&tripId=${selectedTripId}&limit=200`);
         const logs = await logsRes.json();
-        const unloadCount = logs.filter((l: any) => l.actionType === 'unloading').length;
-        if (unloadCount + 1 >= (trip.unloadAddresses?.length || 1)) {
+        const unloadCount = logs.filter((l: ActionLog) => l.actionType === 'unloading').length;
+        if (unloadCount + 1 >= (trip.unloadAddresses?.length || 0)) {
           setIsLastUnload(true); setShouldCloseTrip(true);
         } else { setIsLastUnload(false); }
       } else { setIsLastUnload(false); }
     };
     checkLastUnload();
-  }, [actionType, selectedTripId, cadence.id, areTripsLoading]);
+  }, [actionType, selectedTripId, cadence.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tachographData?.odometer || !actionType) {
       toast({ variant: 'destructive', title: 'Помилка', description: 'Будь ласка, заповніть дані тахографа та виберіть дію.' }); return;
     }
-    const isVehicleAction = actionType === 'trailer-change' || actionType === 'vehicle-change';
-    if (!selectedTripId && !isVehicleAction) {
-      toast({ variant: 'destructive', title: 'Помилка', description: 'Немає активного рейсу.' }); return;
-    }
+    if (!selectedTripId) { toast({ variant: 'destructive', title: 'Помилка', description: 'Немає активного рейсу.' }); return; }
     setIsSubmitting(true);
 
     try {
-      const logPayload: any = {
+      const logPayload: Record<string, unknown> = {
         cadenceId: cadence.id,
         timestamp: new Date().toISOString(),
         odometer: Number(tachographData.odometer),
@@ -447,7 +426,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         locationLongitude: tachographData.coords?.lon || 0,
         locationName: tachographData.location,
         actionType,
-        ...(selectedTripId && { tripId: selectedTripId }),
+        tripId: selectedTripId,
         ...(weight && { weight: Number(weight) }),
         ...(notes && { notes }),
         ...(fileUrl && { fileUrl }),
@@ -461,7 +440,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
       if (actionType === 'trailer-change' || actionType === 'vehicle-change') {
         const logsRes = await fetch(`/api/action-logs?cadenceId=${cadence.id}&tripId=${selectedTripId}&limit=200`);
         const logs = await logsRes.json();
-        const hasLoading = logs.some((l: any) => l.actionType === 'loading');
+        const hasLoading = logs.some((l: ActionLog) => l.actionType === 'loading');
         if (hasLoading) {
           await apiMutate('/api/trips', 'PATCH', { id: selectedTripId, cadenceId: cadence.id, isClosed: true });
           toast({ title: 'Рейс закрито.' });
@@ -487,16 +466,14 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   return (
     <form onSubmit={handleSubmit} className="space-y-1 pt-1">
       <TachographInput onDataExtracted={setTachographData} />
-      {(actionType === 'loading' || actionType === 'unloading' || actionType === '') && (
-        <div className="space-y-1">
-          <Label>Рейс</Label>
-          <div className="flex flex-col justify-center rounded-md border border-input bg-muted px-3 py-1.5 text-sm min-h-[36px]">
-            {areTripsLoading ? <span className="text-muted-foreground">Завантаження...</span>
-              : oldestTrip ? (<><span className="font-bold text-foreground truncate">{oldestTrip.id}</span><span className="text-xs text-muted-foreground truncate">{oldestTrip.description}</span></>)
-              : <span className="text-muted-foreground">Немає активних рейсів</span>}
-          </div>
+      <div className="space-y-1">
+        <Label>Рейс</Label>
+        <div className="flex flex-col justify-center rounded-md border border-input bg-muted px-3 py-1.5 text-sm min-h-[36px]">
+          {areTripsLoading ? <span className="text-muted-foreground">Завантаження...</span>
+            : oldestTrip ? (<><span className="font-bold text-foreground truncate">{oldestTrip.id}</span><span className="text-xs text-muted-foreground truncate">{oldestTrip.description}</span></>)
+            : <span className="text-muted-foreground">Немає активних рейсів</span>}
         </div>
-      )}
+      </div>
       <div className="space-y-1">
         <Label htmlFor="action-type">Дія</Label>
         <Select onValueChange={(v: ActionType) => setActionType(v)} value={actionType}>
@@ -510,39 +487,12 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
           <Input id="weight" type="number" placeholder="напр., 22000" max="26000" value={weight} onChange={e => setWeight(e.target.value)} className="h-8" />
         </div>
       )}
-      {(actionType === 'trailer-change' || actionType === 'vehicle-change') && (() => {
-        const suggestions = (actionType === 'trailer-change' ? prevTrailerNumbers : prevVehicleNumbers)
-          .filter(n => n !== (actionType === 'trailer-change' ? cadence.trailerNumber : cadence.vehicleNumber))
-          .filter(n => n.toLowerCase().includes(newNumber.toLowerCase()));
-        return (
-          <div className="space-y-1 relative">
-            <Label htmlFor="new-number">{actionType === 'trailer-change' ? 'Новий номер причепа' : 'Новий номер авто'}</Label>
-            <Input
-              id="new-number"
-              placeholder="Введіть або виберіть номер"
-              value={newNumber}
-              onChange={e => { setNewNumber(e.target.value); setShowSuggestions(true); }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-              className="h-8"
-              autoComplete="off"
-            />
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-50 w-full mt-1 rounded-md border border-input bg-popover shadow-md">
-                {suggestions.map(n => (
-                  <div
-                    key={n}
-                    className="px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground"
-                    onMouseDown={() => { setNewNumber(n); setShowSuggestions(false); }}
-                  >
-                    {n}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {(actionType === 'trailer-change' || actionType === 'vehicle-change') && (
+        <div className="space-y-1">
+          <Label htmlFor="new-number">{actionType === 'trailer-change' ? 'Новий номер причепа' : 'Новий номер авто'}</Label>
+          <Input id="new-number" placeholder="Введіть новий номер" value={newNumber} onChange={e => setNewNumber(e.target.value)} className="h-8" />
+        </div>
+      )}
       <div className="space-y-1">
         <Label htmlFor="notes">Нотатки</Label>
         <Input id="notes" placeholder="напр., CMR #12345" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
@@ -554,7 +504,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         </div>
       )}
       <PhotoInput onFileUploaded={setFileUrl} promptText="Додати фото документа" />
-      <Button type="submit" className="w-full h-9" disabled={isSubmitting || (!selectedTripId && actionType !== 'trailer-change' && actionType !== 'vehicle-change')}>
+      <Button type="submit" className="w-full h-9" disabled={isSubmitting || !selectedTripId}>
         {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Записати дію'}
       </Button>
     </form>
@@ -564,16 +514,11 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
 // ─── Main ActionDialog ────────────────────────────────────────────────────────
 export default function ActionDialog({ open, onOpenChange, cadence }: ActionDialogProps) {
   const [view, setView] = React.useState<'main' | 'shift' | 'expense' | 'trip' | 'new-trip'>('main');
-  const { refetch: refetchActivityFeed } = useActivityRefetch();
 
   React.useEffect(() => { if (open) setView('main'); }, [open]);
 
   const closeDialog = () => onOpenChange(false);
-  const handleFinished = () => {
-    closeDialog();
-    refetchActivityFeed();
-    setTimeout(() => setView('main'), 300);
-  };
+  const handleFinished = () => { closeDialog(); setTimeout(() => setView('main'), 300); };
 
   const renderContent = () => {
     switch (view) {

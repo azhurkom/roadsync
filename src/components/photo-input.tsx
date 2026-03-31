@@ -46,12 +46,13 @@ export default function PhotoInput({ onFileUploaded, promptText = 'Додати 
       setUploadedUrl(url);
       onFileUploaded(url);
       toast({ title: 'Фото збережено!' });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       setPreview(null);
       toast({
         variant: 'destructive',
         title: 'Помилка завантаження',
-        description: error.message || 'Не вдалося завантажити фото.',
+        description: err.message || 'Не вдалося завантажити фото.',
       });
     } finally {
       setIsUploading(false);

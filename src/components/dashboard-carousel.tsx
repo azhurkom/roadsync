@@ -8,10 +8,11 @@ import {
   type CarouselApi,
 } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
-import type { Cadence } from '@/lib/types';
-import { Clock, Truck, BedDouble, Loader2 } from 'lucide-react';
+import type { Cadence, CarouselItemData } from '@/lib/types';
+import { Clock, Truck, BedDouble, Loader2, Route } from 'lucide-react';
 import { TrailerIcon } from '@/components/icons';
 import { useShiftStatus } from '@/hooks/use-shift-status';
+import { useLatestTrip } from '@/hooks/use-trips';
 import { cn } from '@/lib/utils';
 
 
@@ -20,7 +21,8 @@ interface DashboardCarouselProps {
 }
 
 export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
-    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, shortRestCount, isLoading: isShiftStatusLoading } = useShiftStatus(cadence?.id);
+    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, isLoading: isShiftStatusLoading } = useShiftStatus(cadence?.id);
+    const { latestTrip, isLoading: isTripLoading } = useLatestTrip(cadence?.id);
     const [duration, setDuration] = React.useState('00:00:00');
     const [api, setApi] = React.useState<CarouselApi>()
     
@@ -52,7 +54,7 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
         }
     }, [isShiftActive, activeShiftStartTime, lastShiftEndTime]);
     
-    let shiftOrRestItem: any;
+    let shiftOrRestItem: CarouselItemData & { iconClassName?: string; icon: any };
 
     if (isShiftStatusLoading) {
         shiftOrRestItem = {
@@ -81,11 +83,6 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
       };
     }
 
-    const addHours = (date: Date, hours: number): string => {
-        const result = new Date(date.getTime() + hours * 60 * 60 * 1000);
-        return result.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-    };
-
     const carouselItems = [
       shiftOrRestItem,
       {
@@ -104,6 +101,25 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
       },
     ];
 
+    if (isTripLoading) {
+        carouselItems.push({
+            id: 'trip-loading',
+            icon: Loader2,
+            iconClassName: 'animate-spin',
+            title: 'Завантаження рейсу...',
+            value: '...',
+            description: 'Очікуйте...',
+        });
+    } else if (latestTrip) {
+        carouselItems.push({
+            id: 'latest-trip',
+            icon: Route,
+            title: 'Поточний рейс',
+            value: latestTrip.id,
+            description: latestTrip.description,
+        });
+    }
+    
     const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
       // Stop the event from bubbling up to the parent carousel in page.tsx
       e.stopPropagation();
@@ -131,8 +147,7 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
       <Carousel 
         setApi={setApi}
         opts={{ 
-            loop: true,
-            watchDrag: false
+            loop: true
         }} 
         className="w-full"
       >
@@ -160,56 +175,6 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
               </CarouselItem>
             );
           })}
-
-          {/* Слайд граничних часів зміни або відпочинку */}
-          {!isShiftStatusLoading && (isShiftActive ? activeShiftStartTime : lastShiftEndTime) && (
-            <CarouselItem key="time-limits">
-              <div className="p-1">
-                <Card>
-                  <CardContent className="flex flex-row items-center p-4 space-x-3">
-                    <Clock className="w-8 h-8 text-primary shrink-0" />
-                    <div className="flex flex-col text-left overflow-hidden w-full">
-                      {isShiftActive && activeShiftStartTime ? (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-muted-foreground">Зміна закінчується</p>
-                            <p className="text-sm font-bold text-primary">{Math.max(0, 3 - shortRestCount)} з 3</p>
-                          </div>
-                          <div className="flex gap-4 mt-1">
-                            <div>
-                              <p className="text-xs text-muted-foreground">через 13 годин</p>
-                              <p className="text-xl font-bold font-headline tabular-nums">{addHours(activeShiftStartTime, 13)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">через 15 годин</p>
-                              <p className="text-xl font-bold font-headline tabular-nums">{addHours(activeShiftStartTime, 15)}</p>
-                            </div>
-                          </div>
-                        </>
-                      ) : lastShiftEndTime ? (
-                        <>
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm text-muted-foreground">Початок зміни</p>
-                            <p className="text-sm font-bold text-primary">{Math.max(0, 3 - shortRestCount)} з 3</p>
-                          </div>
-                          <div className="flex gap-4 mt-1">
-                            <div>
-                              <p className="text-xs text-muted-foreground">через 9 годин</p>
-                              <p className="text-xl font-bold font-headline tabular-nums">{addHours(lastShiftEndTime, 9)}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">через 11 годин</p>
-                              <p className="text-xl font-bold font-headline tabular-nums">{addHours(lastShiftEndTime, 11)}</p>
-                            </div>
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CarouselItem>
-          )}
         </CarouselContent>
       </Carousel>
     </div>

@@ -3,13 +3,29 @@
 import { useMemo } from 'react';
 import { useApi } from './use-api';
 import { useUser } from './use-user';
+import { useTabVisibility, useNetworkStatus } from './use-smart-polling';
 import type { Cadence } from '@/lib/types';
 
 export function useActiveCadence() {
   const { user, isUserLoading } = useUser();
+  const isVisible = useTabVisibility();
+  const isOnline = useNetworkStatus();
 
-  const { data, isLoading, error, refetch } = useApi<Cadence[]>(
-    user ? '/api/cadences?active=true' : null
+  // Adaptive polling based on tab visibility and network status
+  const refreshInterval = useMemo(() => {
+    if (!isVisible || !isOnline) return 0; // No polling when tab is hidden or offline
+    return isVisible ? 15000 : 60000; // 15s when active, 60s when background
+  }, [isVisible, isOnline]);
+
+  const { data, isLoading, error, refetch, invalidateCache } = useApi<Cadence[]>(
+    user ? '/api/cadences?active=true' : null,
+    { 
+      refreshInterval,
+      cacheKey: 'active-cadence',
+      staleTime: 30000, // 30 seconds
+      retryCount: 2,
+      retryDelay: 1000
+    }
   );
 
   const activeCadence = useMemo(() => {
@@ -22,5 +38,6 @@ export function useActiveCadence() {
     isLoading: isUserLoading || isLoading,
     error,
     refetch,
+    invalidateCache,
   };
 }

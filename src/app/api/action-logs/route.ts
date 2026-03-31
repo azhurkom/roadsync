@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import pool from '@/lib/db';
+import type { DatabaseRow } from '@/lib/types';
 
-function mapLog(r: any) {
+function mapLog(r: DatabaseRow) {
   return {
     id: r.id,
     cadenceId: r.cadence_id,
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   if (!await verifyCadenceOwner(cadenceId, userId)) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   let query = `SELECT * FROM action_logs WHERE cadence_id = $1`;
-  const params: any[] = [cadenceId];
+  const params: (string | number | null)[] = [cadenceId];
   let idx = 2;
 
   if (tripId) { query += ` AND trip_id = $${idx++}`; params.push(tripId); }

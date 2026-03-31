@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import pool from '@/lib/db';
+import type { DatabaseRow } from '@/lib/types';
 
-function mapAddress(r: any) {
+function mapAddress(r: DatabaseRow) {
   return {
     id: r.id,
     userId: r.user_id,
@@ -56,7 +57,7 @@ export async function PATCH(req: NextRequest) {
   if (!existing.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const updates: string[] = [];
-  const params: any[] = [];
+  const params: (string | number | null)[] = [];
   let idx = 1;
   if (name !== undefined) { updates.push(`name = $${idx++}`); params.push(name); }
   if (address !== undefined) { updates.push(`address = $${idx++}`); params.push(address); }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import pool from '@/lib/db';
+import type { DatabaseRow } from '@/lib/types';
 
-function mapExpense(r: any) {
+function mapExpense(r: DatabaseRow) {
   return {
     id: r.id,
     cadenceId: r.cadence_id,

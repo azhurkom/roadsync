@@ -6,13 +6,7 @@ import { Camera, CheckCircle, Copy, Loader2, MapPin, XCircle, Image as ImageIcon
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-
-type TachographData = {
-  odometer: string;
-  location: string;
-  coords: { lat: number; lon: number } | null;
-  photo: File | null;
-};
+import type { TachographData } from '@/lib/types';
 
 interface TachographInputProps {
   onDataExtracted: (data: TachographData) => void;
@@ -92,8 +86,9 @@ export default function TachographInput({ onDataExtracted }: TachographInputProp
       if (result.odometerReading) {
         setData(prev => ({ ...prev, odometer: result.odometerReading }));
       }
-    } catch (error: any) {
-      const is429 = error?.message?.includes('429') || error?.message?.includes('Quota');
+    } catch (error: unknown) {
+      const err = error as Error;
+      const is429 = err?.message?.includes('429') || err?.message?.includes('Quota');
       toast({
         variant: 'destructive',
         title: 'Помилка OCR',
@@ -120,8 +115,9 @@ export default function TachographInput({ onDataExtracted }: TachographInputProp
           if (result.city) {
             setData(prev => ({ ...prev, location: result.city }));
           }
-        } catch (error: any) {
-          const is429 = error?.message?.includes('429') || error?.message?.includes('Quota');
+        } catch (error: unknown) {
+          const err = error as Error;
+          const is429 = err?.message?.includes('429') || err?.message?.includes('Quota');
           toast({
             variant: 'destructive',
             title: 'Помилка геолокації',

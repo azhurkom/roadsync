@@ -80,3 +80,77 @@ export type CarouselItemData = {
   value: string;
   description: string;
 };
+
+// API Types
+export interface ApiResponse<T = unknown> {
+  data?: T;
+  error?: string;
+  status?: number;
+}
+
+export interface QueryParams {
+  cadenceId?: string;
+  active?: string;
+  limit?: string;
+  closed?: string;
+}
+
+export interface FileUploadResponse {
+  id: string;
+  url: string;
+}
+
+// Export types
+export interface ExportableRecord {
+  [key: string]: string | number | boolean | null;
+}
+
+export interface FlattenedRecord {
+  [key: string]: string | number | boolean | null;
+}
+
+// Tachograph types
+export interface TachographData {
+  odometer: string;
+  location: string;
+  coords: { lat: number; lon: number } | null;
+  photo: File | null;
+}
+
+// Database row types
+export interface DatabaseRow {
+  [key: string]: unknown;
+}
+
+// API Request/Response types
+export interface CreateCadenceRequest {
+  firmName: string;
+  vehicleNumber: string;
+  trailerNumber: string;
+}
+
+export interface UpdateCadenceRequest {
+  id: string;
+  endDate?: string;
+  vehicleNumber?: string;
+  trailerNumber?: string;
+}
+
+export interface CreateTripRequest {
+  cadenceId: string;
+  id: string;
+  description: string;
+  referenceNumber?: string;
+  loadAddresses?: string[];
+  unloadAddresses?: string[];
+}
+
+export interface UpdateTripRequest {
+  id: string;
+  cadenceId: string;
+  isClosed?: boolean;
+  description?: string;
+  referenceNumber?: string;
+  loadAddresses?: string[];
+  unloadAddresses?: string[];
+}
