@@ -60,7 +60,7 @@ export default function Home() {
     else api.scrollPrev();
   };
 
-  if (isUserLoading || !user || isCadenceLoading) {
+  if (isUserLoading || !user || (isCadenceLoading && !activeCadence)) {
     return (
       <div className="flex h-dvh items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
