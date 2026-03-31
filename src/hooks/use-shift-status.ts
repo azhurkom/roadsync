@@ -19,7 +19,7 @@ export function useShiftStatus(cadenceId: string | undefined) {
   );
 
   const shiftStatus = useMemo(() => {
-    if (isLoading || !recentActionLogs) {
+    if (!recentActionLogs) {
       return { isActive: false, startTime: null, lastShiftEndTime: null, shortRestCount: 0, isLoading: true };
     }
 
