@@ -56,7 +56,7 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
     
     let shiftOrRestItem: CarouselItemData & { iconClassName?: string; icon: any };
 
-    if (isShiftStatusLoading) {
+    if (isShiftStatusLoading && !activeShiftStartTime && !lastShiftEndTime) {
         shiftOrRestItem = {
             id: 'duration-loading',
             icon: Loader2,

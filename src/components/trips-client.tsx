@@ -172,7 +172,8 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
     } catch { toast({ variant: 'destructive', title: 'Помилка' }); }
   };
 
-  const isLoading = areTripsLoading || areAddressesLoading;
+  const isFirstLoad = (areTripsLoading && !trips) || (areAddressesLoading && !savedAddresses);
+  const isLoading = isFirstLoad;
 
   return (
     <div className="space-y-2">
