@@ -92,7 +92,7 @@ export function useApi<T>(
     }
 
     try {
-      setIsLoading(true);
+      if (!data) setIsLoading(true);
       const res = await fetch(url, {
         signal: abortControllerRef.current.signal,
         headers: {
