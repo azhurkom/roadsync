@@ -25,6 +25,11 @@ import {
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const { activeCadence, isLoading: isCadenceLoading } = useActiveCadence();
+  const cadenceRef = React.useRef(activeCadence);
+  if (activeCadence?.id !== cadenceRef.current?.id) {
+    cadenceRef.current = activeCadence;
+  }
+  const stableCadence = cadenceRef.current;
   const router = useRouter();
   const [api, setApi] = React.useState<CarouselApi>();
   const [activeSlide, setActiveSlide] = React.useState(0);
@@ -82,7 +87,7 @@ export default function Home() {
               >
                 <CarouselContent className="-ml-0 h-full">
                   <CarouselItem className="pl-0 h-full overflow-y-auto pb-20">
-                    <DashboardClient cadence={activeCadence} />
+                    <DashboardClient cadence={stableCadence!} />
                   </CarouselItem>
                   <CarouselItem className="pl-0 h-full overflow-y-auto">
                     <div className="p-2 sm:p-4">
@@ -101,7 +106,7 @@ export default function Home() {
             <ActionDialog
                 open={isActionDialogOpen}
                 onOpenChange={setIsActionDialogOpen}
-                cadence={activeCadence}
+                cadence={stableCadence!}
               />
               <div className="fixed bottom-4 right-4 z-20">
                 <Button

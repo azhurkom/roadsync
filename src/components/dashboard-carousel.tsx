@@ -101,16 +101,7 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
       },
     ];
 
-    if (isTripLoading) {
-        carouselItems.push({
-            id: 'trip-loading',
-            icon: Loader2,
-            iconClassName: 'animate-spin',
-            title: 'Завантаження рейсу...',
-            value: '...',
-            description: 'Очікуйте...',
-        });
-    } else if (latestTrip) {
+    if (latestTrip) {
         carouselItems.push({
             id: 'latest-trip',
             icon: Route,
