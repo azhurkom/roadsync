@@ -50,7 +50,7 @@ export const UpdateTripSchema = z.object({
 // Action Log validation schemas
 export const CreateActionLogSchema = z.object({
   cadenceId: IdSchema,
-  tripId: IdSchema.optional(),
+  tripId: z.string().min(1).optional(),
   timestamp: TimestampSchema,
   odometer: OdometerSchema,
   locationLatitude: z.number(),
@@ -131,7 +131,7 @@ export const TripQuerySchema = z.object({
 
 export const ActionLogQuerySchema = z.object({
   cadenceId: IdSchema,
-  tripId: IdSchema.optional(),
+  tripId: z.string().min(1).optional(),
   limit: z.string().regex(/^\d+$/).transform(Number).refine(n => n > 0 && n <= 10000, {
     message: 'Limit must be between 1 and 10000'
   }).optional(),
