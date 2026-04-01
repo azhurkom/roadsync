@@ -36,7 +36,7 @@ export const CreateTripSchema = z.object({
 });
 
 export const UpdateTripSchema = z.object({
-  id: IdSchema,
+  id: z.string().min(1),
   cadenceId: IdSchema,
   isClosed: z.boolean().optional(),
   description: z.string().min(1).max(500).optional(),
