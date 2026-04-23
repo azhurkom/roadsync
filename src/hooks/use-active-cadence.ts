@@ -14,8 +14,9 @@ export function useActiveCadence() {
   // Adaptive polling based on tab visibility and network status
   const refreshInterval = useMemo(() => {
     if (!isOnline) return 0;
+    if (!data || data.length === 0) return 30000; // рідше якщо немає каденції
     return isVisible ? 15000 : 60000;
-  }, [isVisible, isOnline]);
+  }, [isVisible, isOnline, data]);
 
   const { data, isLoading, error, refetch, invalidateCache } = useApi<Cadence[]>(
     user ? '/api/cadences?active=true' : null,
