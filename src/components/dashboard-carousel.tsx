@@ -9,10 +9,9 @@ import {
 } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import type { Cadence, CarouselItemData } from '@/lib/types';
-import { Clock, Truck, BedDouble, Loader2, Route } from 'lucide-react';
+import { Clock, Truck, BedDouble, Loader2, AlarmClock } from 'lucide-react';
 import { TrailerIcon } from '@/components/icons';
 import { useShiftStatus } from '@/hooks/use-shift-status';
-import { useLatestTrip } from '@/hooks/use-trips';
 import { cn } from '@/lib/utils';
 
 
@@ -21,8 +20,7 @@ interface DashboardCarouselProps {
 }
 
 export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
-    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, isLoading: isShiftStatusLoading } = useShiftStatus(cadence?.id);
-    const { latestTrip, isLoading: isTripLoading } = useLatestTrip(cadence?.id);
+    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, shortRestCount, isLoading: isShiftStatusLoading } = useShiftStatus(cadence?.id);
     const [duration, setDuration] = React.useState('00:00:00');
     const [api, setApi] = React.useState<CarouselApi>()
     
@@ -101,15 +99,24 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
       },
     ];
 
-    if (latestTrip) {
-        carouselItems.push({
-            id: 'latest-trip',
-            icon: Route,
-            title: 'Поточний рейс',
-            value: latestTrip.id,
-            description: latestTrip.description,
-        });
-    }
+    // Хелпер для додавання годин до дати
+    const addHours = (date: Date, hours: number): string => {
+      const result = new Date(date.getTime() + hours * 60 * 60 * 1000);
+      return result.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+    };
+
+    const remaining = 3 - shortRestCount;
+    const timeLimitSlide = {
+      id: 'time-limits',
+      icon: AlarmClock,
+      isCustom: true,
+      isShiftActive,
+      activeShiftStartTime,
+      lastShiftEndTime,
+      remaining,
+      addHours,
+    };
+    carouselItems.push(timeLimitSlide as any);
     
     const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
       // Stop the event from bubbling up to the parent carousel in page.tsx
@@ -143,7 +150,55 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
         className="w-full"
       >
         <CarouselContent>
-          {carouselItems.map((item) => {
+          {carouselItems.map((item: any) => {
+            if (item.isCustom) {
+              const timeRef = item.isShiftActive ? item.activeShiftStartTime : item.lastShiftEndTime;
+              const title = item.isShiftActive
+                ? \`Зміна закінчується (\${item.remaining} з 3)\`
+                : \`Початок зміни (\${item.remaining} з 3)\`;
+              const t1label = item.isShiftActive ? 'через 13 год:' : 'через 9 год:';
+              const t2label = item.isShiftActive ? 'через 15 год:' : 'через 11 год:';
+              const t1hours = item.isShiftActive ? 13 : 9;
+              const t2hours = item.isShiftActive ? 15 : 11;
+              const t1warn = !item.isShiftActive;
+              const t2warn = item.isShiftActive;
+              return (
+                <CarouselItem key={item.id}>
+                  <div className="p-1">
+                    <Card>
+                      <CardContent className="flex flex-row items-center p-4 space-x-3">
+                        <AlarmClock className="w-8 h-8 text-primary shrink-0" />
+                        <div className="flex flex-col text-left overflow-hidden w-full">
+                          <p className="text-sm text-muted-foreground">{title}</p>
+                          {timeRef ? (
+                            <div className="flex flex-col gap-0.5 mt-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-24">{t1label}</span>
+                                <span className={cn("text-xl font-bold font-headline tabular-nums", t1warn ? "text-yellow-500" : "text-foreground")}>
+                                  {item.addHours(timeRef, t1hours)}
+                                </span>
+                                {t1warn && <span className="text-yellow-500">⚠️</span>}
+                                {!t1warn && <span className="text-green-500">✅</span>}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground w-24">{t2label}</span>
+                                <span className={cn("text-xl font-bold font-headline tabular-nums", t2warn ? "text-yellow-500" : "text-foreground")}>
+                                  {item.addHours(timeRef, t2hours)}
+                                </span>
+                                {t2warn && <span className="text-yellow-500">⚠️</span>}
+                                {!t2warn && <span className="text-green-500">✅</span>}
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">Зміна ще не починалась</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+              );
+            }
             const Icon = item.icon;
             return (
               <CarouselItem key={item.id}>
