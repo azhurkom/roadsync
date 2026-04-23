@@ -154,8 +154,8 @@ export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
             if (item.isCustom) {
               const timeRef = item.isShiftActive ? item.activeShiftStartTime : item.lastShiftEndTime;
               const title = item.isShiftActive
-                ? \`Зміна закінчується (\${item.remaining} з 3)\`
-                : \`Початок зміни (\${item.remaining} з 3)\`;
+                ? `Зміна закінчується (${item.remaining} з 3)`
+                : `Початок зміни (${item.remaining} з 3)`;
               const t1label = item.isShiftActive ? 'через 13 год:' : 'через 9 год:';
               const t2label = item.isShiftActive ? 'через 15 год:' : 'через 11 год:';
               const t1hours = item.isShiftActive ? 13 : 9;
