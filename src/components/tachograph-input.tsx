@@ -25,7 +25,7 @@ export default function TachographInput({ onDataExtracted }: TachographInputProp
   React.useEffect(() => { onDataExtracted(data); }, [data, onDataExtracted]);
 
   const handleManualInput = () => {
-    if (!preview && !data.location && !isProcessing) {
+    if (!data.location && !isProcessing) {
       setIsProcessing(true);
       processGeolocation();
     }
