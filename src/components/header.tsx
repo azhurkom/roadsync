@@ -9,11 +9,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button, buttonVariants } from '@/components/ui/button';
-import { LogOut, Settings, User as UserIcon, FileDown, Loader2, BookUser } from 'lucide-react';
+import { LogOut, Settings, User as UserIcon, Archive, BookUser } from 'lucide-react';
 import { useUser } from '@/hooks/use-user';
 import { useActiveCadence } from '@/hooks/use-active-cadence';
 import { useToast } from '@/hooks/use-toast';
-import { downloadFile } from '@/lib/download';
 import { apiMutate } from '@/hooks/use-api';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -24,68 +23,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
 
-async function exportUserData(userId: string): Promise<string | null> {
-  // Fetch all cadences then build CSV
-  const res = await fetch('/api/cadences');
-  const cadences = await res.json();
-  if (!cadences.length) return null;
-
-  const rows: string[] = ['type,cadence,date,odometer,location,action,amount,notes'];
-
-  for (const cadence of cadences) {
-    const [logsRes, expRes] = await Promise.all([
-      fetch(`/api/action-logs?cadenceId=${cadence.id}&limit=1000`),
-      fetch(`/api/expenses?cadenceId=${cadence.id}`),
-    ]);
-    const logs = await logsRes.json();
-    const expenses = await expRes.json();
-
-    for (const log of logs) {
-      rows.push([
-        'action', cadence.firmName,
-        format(new Date(log.timestamp), 'dd.MM.yyyy HH:mm'),
-        log.odometer, log.locationName, log.actionType, '', log.notes || ''
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-    }
-    for (const exp of expenses) {
-      rows.push([
-        'expense', cadence.firmName,
-        format(new Date(exp.timestamp), 'dd.MM.yyyy HH:mm'),
-        exp.odometer, exp.locationName, exp.type, exp.amount, exp.notes || ''
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
-    }
-  }
-
-  return rows.join('\n');
-}
-
 export default function Header() {
   const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
-  const [isExporting, setIsExporting] = React.useState(false);
   const { activeCadence, refetch } = useActiveCadence();
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' });
-  };
-
-  const handleExport = async () => {
-    setIsExporting(true);
-    toast({ title: 'Експорт даних...', description: 'Це може зайняти деякий час.' });
-    try {
-      const csvData = await exportUserData(user?.id || '');
-      if (csvData) {
-        downloadFile(csvData, `roadsync_export_${new Date().toISOString().split('T')[0]}.csv`, 'text/csv;charset=utf-8;');
-        toast({ title: 'Експорт завершено', description: 'Файл було успішно завантажено.' });
-      } else {
-        toast({ title: 'Немає даних для експорту' });
-      }
-    } catch {
-      toast({ variant: 'destructive', title: 'Помилка експорту' });
-    } finally {
-      setIsExporting(false);
-    }
   };
 
   const handleEndCadence = async () => {
@@ -176,6 +121,10 @@ export default function Header() {
               <DropdownMenuItem onClick={() => router.push('/addresses')}>
                 <BookUser className="mr-2 h-4 w-4" />
                 <span>Адресна книга</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/archive')}>
+                <Archive className="mr-2 h-4 w-4" />
+                <span>Архів каденцій</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => router.push('/settings')}>
