@@ -22,11 +22,7 @@ export async function POST(req: NextRequest) {
     const city =
       addr.village ||
       addr.hamlet ||
-      addr.suburb ||
-      addr.quarter ||
-      addr.neighbourhood ||
       addr.town ||
-      addr.city_district ||
       addr.city ||
       addr.county ||
       addr.state ||
