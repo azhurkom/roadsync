@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/auth-provider';
+import { OfflineIndicator } from '@/components/offline-indicator';
 
 export const metadata: Metadata = {
   title: 'Щоденник RoadSync',
@@ -22,7 +23,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="RoadSync" />
         <link rel="apple-touch-icon" href="/icon-192x192.png" />
-        <script dangerouslySetInnerHTML={{__html: `if ('serviceWorker' in navigator) { window.addEventListener('load', function() { navigator.serviceWorker.register('/sw.js'); }); }`}} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -35,6 +35,7 @@ export default function RootLayout({
           {children}
         </AuthProvider>
         <Toaster />
+        <OfflineIndicator />
       </body>
     </html>
   );
