@@ -61,6 +61,20 @@ export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
       if (log.actionType === 'loading' && log.weight) { totalWeightKg += log.weight; loadCount++; }
     });
 
+    // Пустий пробіг: відстань між розвантаженням і наступним завантаженням
+    let emptyRunKm = 0, lastUnloadOdometer = -1;
+    sorted.forEach(log => {
+      if (log.actionType === 'unloading') {
+        lastUnloadOdometer = log.odometer;
+      }
+      if (log.actionType === 'loading' && lastUnloadOdometer > 0) {
+        const d = log.odometer - lastUnloadOdometer;
+        if (d > 0) emptyRunKm += d;
+        lastUnloadOdometer = -1; // скидаємо, чекаємо наступне розвантаження
+      }
+    });
+    const emptyRunPercent = totalDistance > 0 ? (emptyRunKm / totalDistance) * 100 : 0;
+
     const visited = logs.filter(l => (l.actionType==='loading'||l.actionType==='unloading') && l.locationName).map(l => l.locationName!);
     const visitCounts = visited.reduce((a,v) => { a[v]=(a[v]||0)+1; return a; }, {} as Record<string,number>);
     const top3 = Object.entries(visitCounts).sort(([,a],[,b])=>b-a).slice(0,3).map(([name,count])=>({name,count}));
@@ -74,7 +88,7 @@ export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
     const fuelPerTonKm = totalLiters>0&&totalDistance>0&&avgWeight>0 ? (totalLiters/(totalDistance*(avgWeight/1000)))*100 : 0;
     const expCounts = exps.reduce((a,e)=>{ a[e.type]=(a[e.type]||0)+1; return a; }, {} as Record<string,number>);
 
-    return { totalDistance, totalDrivingTimeHours, averageSpeed: avgSpeed, fuelConsumption, expenseChartData: Object.entries(expCounts).map(([name,value])=>({name,value})), totalWeightKg, averageWeightKg: avgWeight, fuelPerTonKm, totalVisits: visited.length, uniqueVisits: Object.keys(visitCounts).length, top3VisitedAddresses: top3 };
+    return { totalDistance, totalDrivingTimeHours, averageSpeed: avgSpeed, fuelConsumption, expenseChartData: Object.entries(expCounts).map(([name,value])=>({name,value})), totalWeightKg, averageWeightKg: avgWeight, fuelPerTonKm, totalVisits: visited.length, uniqueVisits: Object.keys(visitCounts).length, top3VisitedAddresses: top3, emptyRunKm, emptyRunPercent };
   }, [actionLogs, expenses, date]);
 
   if (loadingActions || loadingExpenses)
@@ -112,6 +126,7 @@ export default function AnalyticsClient({ cadence }: AnalyticsClientProps) {
             {title:'Середня швидкість',Icon:Gauge,value:analyticsData!.averageSpeed.toFixed(1),desc:'км / год'},
             {title:'Загальна відстань',Icon:GaugeCircle,value:analyticsData!.totalDistance.toFixed(0),desc:'км за період'},
             {title:'Час за кермом',Icon:BarChart,value:analyticsData!.totalDrivingTimeHours.toFixed(1),desc:'годин за період'},
+            {title:'Пустий пробіг',Icon:MapPin,value:analyticsData!.emptyRunKm.toFixed(0),desc:`${analyticsData!.emptyRunPercent.toFixed(1)}% від загального`},
             {title:'Загальна вага',Icon:Scale,value:(analyticsData!.totalWeightKg/1000).toFixed(2),desc:'тонн за період'},
             {title:'Середня вага',Icon:Scale,value:analyticsData!.averageWeightKg.toFixed(0),desc:'кг на завантаження'},
             {title:'Витрата на вагу',Icon:Droplets,value:analyticsData!.fuelPerTonKm.toFixed(2),desc:'л / 100 т-км'},
