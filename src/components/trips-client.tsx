@@ -108,9 +108,9 @@ const AddressRow = ({ address, addressMap, onCopy }: { address: string; addressM
   const textToCopy = hasCoords ? `${details!.entryLatitude},${details!.entryLongitude}` : address;
   return (
     <div className="py-1.5 text-sm">
-      <div className="flex items-center justify-between">
-        <span className="truncate pr-4 font-medium">{address}</span>
-        <Button variant="ghost" size="icon" onClick={() => onCopy(textToCopy, !!hasCoords)} className="h-8 w-8 shrink-0"><Copy className="h-4 w-4"/></Button>
+      <div className="flex items-start gap-2">
+        <span className="flex-1 break-words font-medium">{address}</span>
+        <Button variant="ghost" size="icon" onClick={() => onCopy(textToCopy, !!hasCoords)} className="h-8 w-8 shrink-0 -mt-0.5"><Copy className="h-4 w-4"/></Button>
       </div>
       {details?.notes && <p className="text-xs text-muted-foreground pl-1 mt-0.5">{details.notes}</p>}
     </div>
@@ -220,7 +220,7 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
         <Accordion type="single" collapsible className="w-full" defaultValue={defaultOpenTripId}>
           {processedTrips.map(trip => (
             <AccordionItem value={trip.id} key={trip.id} className="border-b-0">
-              <Card className="mb-2">
+              <Card className="mb-2 overflow-hidden">
                 <div className="flex items-start">
                   <AccordionTrigger className="flex-1 p-3 hover:no-underline">
                     <div className="flex flex-col text-left overflow-hidden w-full">
