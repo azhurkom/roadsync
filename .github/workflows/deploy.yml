@@ -9,16 +9,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH into VPS and deploy
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "$USER@$HOST" '
             cd /opt/roadsync
             git pull origin main
             docker compose up --build -d
             sleep 3
             docker network connect proxy roadsync-app-1 2>/dev/null || echo "Already on proxy network"
             echo "✅ Deploy complete"
+          '
