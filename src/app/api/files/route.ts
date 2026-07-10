@@ -23,12 +23,46 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Generate unique ID for database and S3 path
+    // Generate unique ID for database
     const fileId = crypto.randomUUID();
     
-    // Create clean S3 key: uploads/userId/fileId-filename
-    const cleanFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const s3Key = `uploads/${userId}/${fileId}-${cleanFilename}`;
+    // Extract file extension and map .jpg -> .jpeg
+    let ext = '.jpeg';
+    const parts = file.name.split('.');
+    if (parts.length > 1) {
+      const fileExt = parts.pop()?.toLowerCase();
+      if (fileExt === 'jpg') {
+        ext = '.jpeg';
+      } else if (fileExt) {
+        ext = `.${fileExt}`;
+      }
+    }
+
+    // Generate date-based parts
+    const date = new Date();
+    const yyyy = date.getUTCFullYear().toString();
+    const yy = yyyy.slice(-2);
+    const mm = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const dd = date.getUTCDate().toString().padStart(2, '0');
+    const datePrefix = `roadsync/${yyyy}/${yy}${mm}${dd}`;
+
+    // Query database to find existing keys for today
+    const { rows } = await pool.query(
+      `SELECT s3_key FROM files WHERE s3_key LIKE $1`,
+      [`${datePrefix}%`]
+    );
+
+    const existingNns = rows
+      .map(r => {
+        const key = r.s3_key || '';
+        const match = key.match(/roadsync\/\d{4}\/\d{6}(\d{2})\./);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(nn => nn > 0);
+
+    const maxNn = existingNns.length > 0 ? Math.max(...existingNns) : 0;
+    const nextNn = (maxNn + 1).toString().padStart(2, '0');
+    const s3Key = `${datePrefix}${nextNn}${ext}`;
 
     // Upload to S3 (Backblaze B2)
     await s3.send(new PutObjectCommand({
