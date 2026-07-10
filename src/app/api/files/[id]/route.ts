@@ -38,7 +38,7 @@ export async function GET(
       // Convert S3 stream to byte array to stream safely across environments
       const fileBuffer = await s3Response.Body.transformToByteArray();
 
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(Buffer.from(fileBuffer), {
         status: 200,
         headers: {
           'Content-Type': mime_type,
