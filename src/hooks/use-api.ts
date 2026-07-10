@@ -26,9 +26,12 @@ function getCacheEntry<T>(key: string, staleTime: number): CacheEntry<T> | null 
   const now = Date.now();
   const isStale = now - entry.timestamp > staleTime;
   
-  if (isStale && entry.isStale) {
-    cache.delete(key);
-    return null;
+  if (isStale) {
+    if (entry.isStale) {
+      cache.delete(key);
+      return null;
+    }
+    entry.isStale = true;
   }
   
   return { ...entry, isStale };

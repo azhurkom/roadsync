@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS files (
   filename    TEXT NOT NULL,
   mime_type   TEXT NOT NULL,
   size_bytes  INTEGER NOT NULL,
-  data        BYTEA NOT NULL,
+  data        BYTEA, -- NULL для файлів у S3
+  s3_key      TEXT,  -- шлях до файлу в S3
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
