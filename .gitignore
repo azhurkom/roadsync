@@ -3,3 +3,26 @@ node_modules/
 # local/ops artifacts
 Switch*.node.js
 current_nodes.json
+
+# secrets & local ops artifacts (never commit)
+.env
+.env.*
+!.env.example
+*.json.bak
+execution_data*.json
+current_workflow*.json
+current_nodes.json
+evening_digest_wf.json
+export*.json
+hermes.json
+obrobka*.json
+photo_wf*.json
+voice_wf.json
+patched_workflow.json
+Switch*.node.js
+test_b2*.js
+generate_patch_vps.py
+inspect_vps_db_workflow.py
+patch_*.sql
+update*.sql
+upgrade_switch*.sql
