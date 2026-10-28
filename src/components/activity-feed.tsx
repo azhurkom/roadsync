@@ -6,7 +6,7 @@ import { useApi } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
 import type { ActionLog, Expense, ActivityFeedItem } from '@/lib/types';
 import {
-  Fuel, Wrench, Download, Upload, Clock, Ban, Truck, WashingMachine, Wallet, LucideIcon, Calendar as CalendarIcon
+  Fuel, Wrench, Download, Upload, Clock, Ban, Truck, WashingMachine, Wallet, LucideIcon, Calendar as CalendarIcon, FileText
 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { uk } from 'date-fns/locale';
@@ -53,7 +53,7 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
     const expense = item as Expense;
     let expenseDetails = `${expense.amount} EUR • ${expense.paymentMethod}`;
     if ((expense.type === 'паливо' || expense.type === 'adblue') && typeof expense.liters === 'number') {
-      expenseDetails = `${expense.liters}л, ${expenseDetails}`;
+      expenseDetails = `${expense.liters.toFixed(2)}л, ${expenseDetails}`;
     }
     detailsElements.push(<span key="exp-details">{expenseDetails}</span>);
   } else if (action) {
@@ -93,7 +93,20 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-baseline">
-          <p className="font-medium capitalize">{title}</p>
+          <div className="flex items-center gap-1.5">
+            <p className="font-medium capitalize">{title}</p>
+            {action && (action.actionType === 'loading' || action.actionType === 'unloading' || action.actionType === 'trailer-change') && action.fileUrl && (
+              <a
+                href={action.fileUrl.replace('/api/files/', '/files/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 transition-colors inline-flex items-center"
+                title="Відкрити документ"
+              >
+                <FileText className="w-4 h-4" />
+              </a>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(item.timestamp)}</p>
         </div>
         {action?.tripId && <p className="text-sm text-muted-foreground truncate">Рейс: {action.tripId}</p>}

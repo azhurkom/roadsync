@@ -1,3 +1,5 @@
 node_modules/
-.next/
-*.tsbuildinfo
+
+# local/ops artifacts
+Switch*.node.js
+current_nodes.json

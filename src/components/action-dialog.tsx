@@ -17,6 +17,7 @@ import { useUser } from '@/hooks/use-user';
 import { useShiftStatus } from '@/hooks/use-shift-status';
 import { useTrips } from '@/hooks/use-trips';
 import { useApi, apiMutate } from '@/hooks/use-api';
+import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 import { Loader2, ArrowLeft, Clock, Wallet, ClipboardList, FilePlus, PlusCircle, Trash2, BrainCircuit } from 'lucide-react';
 
 interface ActionDialogProps {
@@ -33,7 +34,7 @@ type TachographData = {
 };
 
 const expenseTypes: ExpenseType[] = ['паливо', 'adblue', 'мийка', 'обслуговування', 'інше'];
-const paymentMethods: PaymentMethod[] = ['EDC', 'Готівка', 'Моя картка'];
+const paymentMethods: PaymentMethod[] = ['Tankpool24', 'EDC', 'Готівка', 'Моя картка'];
 const tripActionTypes: ActionType[] = ['loading', 'unloading', 'trailer-change', 'vehicle-change'];
 const tripActionTranslations: Record<ActionType, string> = {
   'loading': 'Завантаження', 'unloading': 'Розвантаження',
@@ -280,7 +281,7 @@ function ExpenseForm({ cadence, onFinished }: { cadence: Cadence; onFinished: ()
   const [liters, setLiters] = React.useState('');
   const [cost, setCost] = React.useState('1');
   const [expenseType, setExpenseType] = React.useState<ExpenseType | ''>('');
-  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod | ''>('EDC');
+  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod | ''>('Tankpool24');
   const [notes, setNotes] = React.useState('');
   const [tachographData, setTachographData] = React.useState<TachographData | null>(null);
   const [receiptUrl, setReceiptUrl] = React.useState<string | null>(null);
@@ -363,7 +364,7 @@ function ExpenseForm({ cadence, onFinished }: { cadence: Cadence; onFinished: ()
           <Input id="expense-notes" className="h-8" placeholder="Опціонально" value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
       )}
-      <PhotoInput onFileUploaded={setReceiptUrl} promptText="Додати фото чеку" />
+      <PhotoInput onFileUploaded={setReceiptUrl} promptText="Додати фото чеку" enableScanner={false} />
       <Button type="submit" className="w-full h-9" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Зберегти витрату'}
       </Button>
@@ -493,6 +494,11 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
           <Input id="new-number" placeholder="Введіть новий номер" value={newNumber} onChange={e => setNewNumber(e.target.value)} className="h-8" />
         </div>
       )}
+      {actionType === 'trailer-change' && (
+        <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 p-2 rounded-md border border-amber-300 dark:border-amber-800 text-xs text-center font-bold">
+          ⚠️ Увага! Не забудьте змінити кількість осей в тахографі!
+        </div>
+      )}
       <div className="space-y-1">
         <Label htmlFor="notes">Нотатки</Label>
         <Input id="notes" placeholder="напр., CMR #12345" value={notes} onChange={e => setNotes(e.target.value)} className="h-8" />
@@ -503,7 +509,7 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
           <Switch id="close-trip-toggle" checked={shouldCloseTrip} onCheckedChange={setShouldCloseTrip} />
         </div>
       )}
-      <PhotoInput onFileUploaded={setFileUrl} promptText="Додати фото документа" />
+      <PhotoInput onFileUploaded={setFileUrl} promptText="Додати фото документа" enableScanner={true} />
       <Button type="submit" className="w-full h-9" disabled={isSubmitting || !selectedTripId}>
         {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Записати дію'}
       </Button>
@@ -514,11 +520,12 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
 // ─── Main ActionDialog ────────────────────────────────────────────────────────
 export default function ActionDialog({ open, onOpenChange, cadence }: ActionDialogProps) {
   const [view, setView] = React.useState<'main' | 'shift' | 'expense' | 'trip' | 'new-trip'>('main');
+  const { refetch } = useActivityRefetch();
 
   React.useEffect(() => { if (open) setView('main'); }, [open]);
 
   const closeDialog = () => onOpenChange(false);
-  const handleFinished = () => { closeDialog(); setTimeout(() => setView('main'), 300); };
+  const handleFinished = () => { closeDialog(); refetch(); setTimeout(() => setView('main'), 300); };
 
   const renderContent = () => {
     switch (view) {

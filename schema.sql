@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS cadences (
   end_date        TIMESTAMPTZ,
   vehicle_number  TEXT NOT NULL,
   trailer_number  TEXT NOT NULL,
+  notes           TEXT,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -118,8 +119,7 @@ CREATE TABLE IF NOT EXISTS files (
   filename    TEXT NOT NULL,
   mime_type   TEXT NOT NULL,
   size_bytes  INTEGER NOT NULL,
-  data        BYTEA, -- NULL для файлів у S3
-  s3_key      TEXT,  -- шлях до файлу в S3
+  data        BYTEA NOT NULL,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 

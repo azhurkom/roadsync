@@ -21,6 +21,7 @@ export const UpdateCadenceSchema = z.object({
   endDate: TimestampSchema.nullable().optional(),
   vehicleNumber: z.string().min(1).max(20).optional(),
   trailerNumber: z.string().min(1).max(20).optional(),
+  notes: z.string().max(1000).nullable().optional(),
 }).refine(data => Object.keys(data).length > 1, {
   message: 'At least one field to update is required'
 });
@@ -30,7 +31,7 @@ export const CreateTripSchema = z.object({
   cadenceId: IdSchema,
   id: z.string().min(1, 'Trip ID is required').max(50),
   description: z.string().min(1, 'Description is required').max(500),
-  referenceNumber: z.string().max(50).optional(),
+  referenceNumber: z.string().max(50).nullable().optional(),
   loadAddresses: z.array(z.string().max(200)).optional(),
   unloadAddresses: z.array(z.string().max(200)).optional(),
 });
@@ -40,7 +41,7 @@ export const UpdateTripSchema = z.object({
   cadenceId: IdSchema,
   isClosed: z.boolean().optional(),
   description: z.string().min(1).max(500).optional(),
-  referenceNumber: z.string().max(50).optional(),
+  referenceNumber: z.string().max(50).nullable().optional(),
   loadAddresses: z.array(z.string().max(200)).optional(),
   unloadAddresses: z.array(z.string().max(200)).optional(),
 }).refine(data => Object.keys(data).length > 2, {
@@ -73,7 +74,7 @@ export const CreateExpenseSchema = z.object({
   timestamp: TimestampSchema,
   type: z.enum(['паливо', 'adblue', 'мийка', 'обслуговування', 'інше']),
   amount: z.number().min(0).max(10000),
-  paymentMethod: z.enum(['EDC', 'Готівка', 'Моя картка']),
+  paymentMethod: z.enum(['EDC', 'Tankpool24', 'Готівка', 'Моя картка']),
   liters: z.number().min(0).max(1000).optional(),
   receiptUrl: z.string().url().optional(),
   odometer: OdometerSchema,

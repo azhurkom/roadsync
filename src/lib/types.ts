@@ -1,5 +1,5 @@
 export type ExpenseType = 'паливо' | 'adblue' | 'мийка' | 'обслуговування' | 'інше';
-export type PaymentMethod = 'EDC' | 'Готівка' | 'Моя картка';
+export type PaymentMethod = 'EDC' | 'Tankpool24' | 'Готівка' | 'Моя картка';
 export type ActionType = 'start-shift' | 'end-shift' | 'loading' | 'unloading' | 'trailer-change' | 'vehicle-change';
 
 export interface Cadence {

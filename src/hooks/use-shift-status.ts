@@ -6,14 +6,14 @@ import { useUser } from './use-user';
 import type { ActionLog } from '@/lib/types';
 
 const HOUR_MS = 60 * 60 * 1000;
-const WEEKLY_REST_MS = 45 * HOUR_MS;  // щотижневий відпочинок ≥ 45 год
+const WEEKLY_REST_MS = 24 * HOUR_MS;  // щотижневий відпочинок ≥ 24 год
 const FULL_REST_MS   = 11 * HOUR_MS;  // повний щоденний відпочинок
 const NORMAL_SHIFT_MS = 13 * HOUR_MS; // стандартна зміна
 
 export function useShiftStatus(cadenceId: string | undefined) {
   const { user } = useUser();
 
-  const { data: recentActionLogs, isLoading } = useApi<ActionLog[]>(
+  const { data: recentActionLogs, isLoading, refetch } = useApi<ActionLog[]>(
     user && cadenceId ? `/api/action-logs?cadenceId=${cadenceId}&limit=200` : null,
     { refreshInterval: 8000, cacheKey: `shift-status-${cadenceId}`, staleTime: 15000 }
   );
@@ -98,5 +98,5 @@ export function useShiftStatus(cadenceId: string | undefined) {
     return { isActive, startTime, lastShiftEndTime, shortRestCount, isLoading: false };
   }, [recentActionLogs, isLoading]);
 
-  return shiftStatus;
+  return { ...shiftStatus, refetch };
 }

@@ -47,19 +47,22 @@ export default function RouteMapClient({ cadenceId }: RouteMapClientProps) {
     user ? `/api/trips?cadenceId=${cadenceId}` : null,
   );
 
+  const hasActiveTrips = React.useMemo(() => trips?.some(t => !t.isClosed) ?? false, [trips]);
   const isLoading = logsLoading || tripsLoading;
 
-  // Filter logs that have valid coordinates, sort chronologically
+  // Filter logs that have valid coordinates, belong to active trips, sort chronologically
   const routePoints = React.useMemo(() => {
-    if (!actionLogs) return [];
+    if (!actionLogs || !trips) return [];
+    const activeTripIds = new Set(trips.filter(t => !t.isClosed).map(t => t.id));
     return actionLogs
       .filter(log => 
         typeof log.locationLatitude === 'number' && 
         typeof log.locationLongitude === 'number' &&
-        (log.locationLatitude !== 0 || log.locationLongitude !== 0)
+        (log.locationLatitude !== 0 || log.locationLongitude !== 0) &&
+        log.tripId && activeTripIds.has(log.tripId)
       )
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-  }, [actionLogs]);
+  }, [actionLogs, trips]);
 
   // Trip lookup map
   const tripMap = React.useMemo(() => {
@@ -104,13 +107,25 @@ export default function RouteMapClient({ cadenceId }: RouteMapClientProps) {
     );
   }
 
+  if (!hasActiveTrips) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[400px] bg-muted/20 rounded-lg">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground text-center px-6">
+          <MapIcon className="h-12 w-12 opacity-40" />
+          <span className="text-sm font-medium">Немає активних рейсів</span>
+          <span className="text-xs opacity-60">Мапа відображає лише поточні активні рейси.</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!routePoints.length) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px] bg-muted/20 rounded-lg">
         <div className="flex flex-col items-center gap-3 text-muted-foreground text-center px-6">
           <MapIcon className="h-12 w-12 opacity-40" />
-          <span className="text-sm">Немає точок з координатами для відображення на мапі.</span>
-          <span className="text-xs opacity-60">Додайте дії з геолокацією, щоб побачити маршрут.</span>
+          <span className="text-sm">Немає точок з координатами для активних рейсів.</span>
+          <span className="text-xs opacity-60">Додайте дії з геолокацією до активних рейсів, щоб побачити маршрут.</span>
         </div>
       </div>
     );

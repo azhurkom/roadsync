@@ -10,14 +10,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const userId = session.user.id;
     const { id } = await params;
 
     const { rows } = await pool.query(
-      `SELECT filename, mime_type, data, s3_key FROM files WHERE id = $1 AND user_id = $2`,
-      [id, userId]
+      `SELECT filename, mime_type, data, s3_key FROM files WHERE id = $1`,
+      [id]
     );
 
     if (!rows.length) return NextResponse.json({ error: 'Not found' }, { status: 404 });
@@ -26,24 +23,25 @@ export async function GET(
 
     if (s3_key) {
       // Fetch file from Backblaze B2 S3
-      const s3Response = await s3.send(new GetObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
-        Key: s3_key,
-      }));
+      const s3Response = await s3.send(
+        new GetObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
+          Key: s3_key,
+        })
+      );
 
       if (!s3Response.Body) {
         return NextResponse.json({ error: 'Empty file body in storage' }, { status: 500 });
       }
 
-      // Convert S3 stream to byte array to stream safely across environments
       const fileBuffer = await s3Response.Body.transformToByteArray();
 
       return new NextResponse(Buffer.from(fileBuffer), {
         status: 200,
         headers: {
-          'Content-Type': mime_type,
+          'Content-Type': mime_type || 'application/octet-stream',
           'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
-          'Cache-Control': 'private, max-age=31536000',
+          'Cache-Control': 'public, max-age=31536000, immutable',
         },
       });
     }
@@ -52,15 +50,45 @@ export async function GET(
     return new NextResponse(data, {
       status: 200,
       headers: {
-        'Content-Type': mime_type,
+        'Content-Type': mime_type || 'application/octet-stream',
         'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
-        'Cache-Control': 'private, max-age=31536000',
+        'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });
   } catch (error: unknown) {
     const err = error as Error;
     console.error('File retrieval error:', err);
     return NextResponse.json({ error: err.message || 'File retrieval failed' }, { status: 500 });
+  }
+}
+
+// HEAD /api/files/[id]
+export async function HEAD(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const { rows } = await pool.query(
+      `SELECT filename, mime_type, size_bytes FROM files WHERE id = $1`,
+      [id]
+    );
+
+    if (!rows.length) return new NextResponse(null, { status: 404 });
+
+    const { filename, mime_type, size_bytes } = rows[0];
+
+    return new NextResponse(null, {
+      status: 200,
+      headers: {
+        'Content-Type': mime_type || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`,
+        'Content-Length': String(size_bytes || 0),
+      },
+    });
+  } catch {
+    return new NextResponse(null, { status: 500 });
   }
 }
 
@@ -87,15 +115,17 @@ export async function DELETE(
 
     if (s3_key) {
       // Delete from S3
-      await s3.send(new DeleteObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
-        Key: s3_key,
-      }));
+      await s3.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
+          Key: s3_key,
+        })
+      );
     }
 
     // Delete from DB (both metadata for S3 files and full data for legacy files)
     await pool.query(`DELETE FROM files WHERE id = $1 AND user_id = $2`, [id, userId]);
-    
+
     return NextResponse.json({ ok: true });
   } catch (error: unknown) {
     const err = error as Error;

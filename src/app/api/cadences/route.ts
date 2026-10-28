@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       vehicleNumber: r.vehicle_number,
       trailerNumber: r.trailer_number,
       userId: r.user_id,
+      notes: r.notes,
     }));
     return NextResponse.json(cadences);
   } catch (error) {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
       vehicleNumber: r.vehicle_number,
       trailerNumber: r.trailer_number,
       userId: r.user_id,
+      notes: r.notes,
     }, { status: 201 });
   } catch (error) {
     return handleValidationError(error);
@@ -82,7 +84,7 @@ export async function PATCH(req: NextRequest) {
     const userId = session.user.id;
     
     const body = await req.json();
-    const { id, endDate, vehicleNumber, trailerNumber } = validateRequestBody(UpdateCadenceSchema, body);
+    const { id, endDate, vehicleNumber, trailerNumber, notes } = validateRequestBody(UpdateCadenceSchema, body);
 
     if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
@@ -99,6 +101,7 @@ export async function PATCH(req: NextRequest) {
     if (endDate !== undefined) { updates.push(`end_date = $${idx++}`); params.push(endDate); }
     if (vehicleNumber !== undefined) { updates.push(`vehicle_number = $${idx++}`); params.push(vehicleNumber); }
     if (trailerNumber !== undefined) { updates.push(`trailer_number = $${idx++}`); params.push(trailerNumber); }
+    if (notes !== undefined) { updates.push(`notes = $${idx++}`); params.push(notes); }
 
     if (!updates.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
 
@@ -115,6 +118,7 @@ export async function PATCH(req: NextRequest) {
       vehicleNumber: r.vehicle_number,
       trailerNumber: r.trailer_number,
       userId: r.user_id,
+      notes: r.notes,
     });
   } catch (error) {
     return handleValidationError(error);

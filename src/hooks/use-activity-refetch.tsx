@@ -4,23 +4,32 @@ import * as React from 'react';
 
 interface ActivityRefetchContextValue {
   refetch: () => void;
-  register: (fn: () => void) => void;
+  register: (fn: () => void) => () => void;
 }
 
 const ActivityRefetchContext = React.createContext<ActivityRefetchContextValue>({
   refetch: () => {},
-  register: () => {},
+  register: () => () => {},
 });
 
 export function ActivityRefetchProvider({ children }: { children: React.ReactNode }) {
-  const refetchRef = React.useRef<() => void>(() => {});
+  const listenersRef = React.useRef<Set<() => void>>(new Set());
 
   const register = React.useCallback((fn: () => void) => {
-    refetchRef.current = fn;
+    listenersRef.current.add(fn);
+    return () => {
+      listenersRef.current.delete(fn);
+    };
   }, []);
 
   const refetch = React.useCallback(() => {
-    refetchRef.current();
+    listenersRef.current.forEach(fn => {
+      try {
+        fn();
+      } catch (err) {
+        console.error('Error during refetch callback:', err);
+      }
+    });
   }, []);
 
   return (
@@ -33,3 +42,4 @@ export function ActivityRefetchProvider({ children }: { children: React.ReactNod
 export function useActivityRefetch() {
   return React.useContext(ActivityRefetchContext);
 }
+

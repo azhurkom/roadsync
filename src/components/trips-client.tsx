@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useAllTrips } from '@/hooks/use-trips';
 import { useUser } from '@/hooks/use-user';
+import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 import { useApi, apiMutate } from '@/hooks/use-api';
 import type { Address, Cadence, Trip, ActionLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -58,8 +59,8 @@ function EditTripForm({ trip, cadenceId, onFinished, savedAddresses }: { trip: T
       });
       toast({ title: 'Рейс оновлено!' });
       onFinished();
-    } catch {
-      toast({ variant: 'destructive', title: 'Помилка', description: 'Не вдалося оновити рейс.' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Помилка', description: err.message || 'Не вдалося оновити рейс.' });
     } finally { setIsSubmitting(false); }
   };
 
@@ -108,9 +109,9 @@ const AddressRow = ({ address, addressMap, onCopy }: { address: string; addressM
   const textToCopy = hasCoords ? `${details!.entryLatitude},${details!.entryLongitude}` : address;
   return (
     <div className="py-1.5 text-sm">
-      <div className="flex items-start gap-2">
-        <span className="flex-1 break-words font-medium">{address}</span>
-        <Button variant="ghost" size="icon" onClick={() => onCopy(textToCopy, !!hasCoords)} className="h-8 w-8 shrink-0 -mt-0.5"><Copy className="h-4 w-4"/></Button>
+      <div className="flex items-center justify-between">
+        <span className="truncate pr-4 font-medium">{address}</span>
+        <Button variant="ghost" size="icon" onClick={() => onCopy(textToCopy, !!hasCoords)} className="h-8 w-8 shrink-0"><Copy className="h-4 w-4"/></Button>
       </div>
       {details?.notes && <p className="text-xs text-muted-foreground pl-1 mt-0.5">{details.notes}</p>}
     </div>
@@ -123,6 +124,13 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
   const { toast } = useToast();
   const { trips, isLoading: areTripsLoading, refetch } = useAllTrips(cadence.id);
   const { data: savedAddresses, isLoading: areAddressesLoading } = useApi<Address[]>(user ? '/api/addresses' : null);
+  const { register, refetch: refetchGlobal } = useActivityRefetch();
+
+  React.useEffect(() => {
+    return register(() => {
+      refetch();
+    });
+  }, [register, refetch]);
 
   const [searchTerm, setSearchTerm] = React.useState('');
   const [sortOrder, setSortOrder] = React.useState<'newest'|'oldest'|'status'>('newest');
@@ -168,7 +176,7 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
     try {
       await apiMutate('/api/trips', 'PATCH', { id: tripId, cadenceId: cadence.id, isClosed: !currentlyClosed });
       toast({ title: currentlyClosed ? 'Рейс відкрито' : 'Рейс завершено', description: `Рейс ${tripId} ${currentlyClosed ? 'знову активний' : 'перенесено в архів'}.` });
-      refetch();
+      refetchGlobal();
     } catch { toast({ variant: 'destructive', title: 'Помилка' }); }
   };
 
@@ -186,7 +194,7 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"/>
             <Input type="search" placeholder="Пошук за ID, описом, адресою..." className="pl-8 w-full h-9" value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2" onClick={e => e.stopPropagation()}>
             <Select value={sortOrder} onValueChange={v=>setSortOrder(v as any)}>
               <SelectTrigger className="w-full h-9"><SelectValue placeholder="Сортувати за"/></SelectTrigger>
               <SelectContent>
@@ -220,13 +228,13 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
         <Accordion type="single" collapsible className="w-full" defaultValue={defaultOpenTripId}>
           {processedTrips.map(trip => (
             <AccordionItem value={trip.id} key={trip.id} className="border-b-0">
-              <Card className="mb-2 overflow-hidden">
+              <Card className="mb-2">
                 <div className="flex items-start">
                   <AccordionTrigger className="flex-1 p-3 hover:no-underline">
                     <div className="flex flex-col text-left overflow-hidden w-full">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold truncate pr-2">{trip.referenceNumber || trip.description}</span>
-                        <Badge variant={trip.isClosed ? 'secondary' : 'default'}>{trip.isClosed ? 'Закрито' : 'Активний'}</Badge>
+                      <div className="flex justify-between items-start gap-2 w-full">
+                        <span className="font-bold break-words whitespace-normal pr-2">{trip.referenceNumber || trip.description}</span>
+                        <Badge variant={trip.isClosed ? 'secondary' : 'default'} className="shrink-0">{trip.isClosed ? 'Закрито' : 'Активний'}</Badge>
                       </div>
                       <span className="text-xs text-muted-foreground">{trip.id}</span>
                     </div>
@@ -296,7 +304,7 @@ export default function TripsClient({ cadence }: { cadence: Cadence }) {
             <DialogDescription>Вже відвідані точки заблоковані.</DialogDescription>
           </DialogHeader>
           {editingTrip && (
-            <EditTripForm trip={editingTrip} cadenceId={cadence.id} onFinished={()=>{setEditingTrip(null);refetch();}} savedAddresses={savedAddresses ?? null}/>
+            <EditTripForm trip={editingTrip} cadenceId={cadence.id} onFinished={()=>{setEditingTrip(null);refetchGlobal();}} savedAddresses={savedAddresses ?? null}/>
           )}
         </DialogContent>
       </Dialog>

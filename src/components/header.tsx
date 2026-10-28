@@ -15,10 +15,8 @@ import { useActiveCadence } from '@/hooks/use-active-cadence';
 import { useToast } from '@/hooks/use-toast';
 import { apiMutate } from '@/hooks/use-api';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
-  AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose,
+} from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { uk } from 'date-fns/locale';
@@ -28,6 +26,8 @@ export default function Header() {
   const router = useRouter();
   const { toast } = useToast();
   const { activeCadence, refetch } = useActiveCadence();
+  const [comment, setComment] = React.useState('');
+  const [isEndDialogOpen, setIsEndDialogOpen] = React.useState(false);
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' });
@@ -39,8 +39,11 @@ export default function Header() {
       await apiMutate('/api/cadences', 'PATCH', {
         id: activeCadence.id,
         endDate: new Date().toISOString(),
+        notes: comment.trim() || null,
       });
       toast({ title: 'Каденцію завершено.' });
+      setIsEndDialogOpen(false);
+      setComment('');
       refetch();
     } catch {
       toast({ variant: 'destructive', title: 'Помилка', description: 'Не вдалося завершити каденцію.' });
@@ -65,34 +68,50 @@ export default function Header() {
       {user && (
         <div className="flex items-center gap-2">
           {activeCadence && (
-            <AlertDialog>
+            <Dialog open={isEndDialogOpen} onOpenChange={setIsEndDialogOpen}>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <AlertDialogTrigger asChild>
+                    <DialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive">
                         <LogOut />
                       </Button>
-                    </AlertDialogTrigger>
+                    </DialogTrigger>
                   </TooltipTrigger>
                   <TooltipContent><p>Завершити каденцію</p></TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Ви впевнені, що хочете завершити каденцію?</AlertDialogTitle>
-                  <AlertDialogDescription>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Завершити каденцію</DialogTitle>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                  <p className="text-sm text-muted-foreground">
                     Ця дія заархівує поточну каденцію. Ви зможете розпочати нову.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleEndCadence} className={buttonVariants({ variant: 'destructive' })}>
-                    Завершити
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </p>
+                  <div className="space-y-2">
+                    <label htmlFor="cadence-comment" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                      Коментар до каденції (опціонально)
+                    </label>
+                    <textarea
+                      id="cadence-comment"
+                      placeholder="Введіть ваш коментар тут..."
+                      value={comment}
+                      onChange={e => setComment(e.target.value)}
+                      className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="flex sm:justify-end gap-2">
+                  <DialogClose asChild>
+                    <Button type="button" variant="ghost">Скасувати</Button>
+                  </DialogClose>
+                  <Button type="button" variant="destructive" onClick={handleEndCadence}>
+                    Завершити каденцію
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
 
           <DropdownMenu>

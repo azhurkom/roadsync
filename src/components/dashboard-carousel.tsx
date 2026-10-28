@@ -13,6 +13,7 @@ import { Clock, Truck, BedDouble, Loader2, AlarmClock } from 'lucide-react';
 import { TrailerIcon } from '@/components/icons';
 import { useShiftStatus } from '@/hooks/use-shift-status';
 import { cn } from '@/lib/utils';
+import { useActivityRefetch } from '@/hooks/use-activity-refetch';
 
 
 interface DashboardCarouselProps {
@@ -20,7 +21,15 @@ interface DashboardCarouselProps {
 }
 
 export default function DashboardCarousel({ cadence }: DashboardCarouselProps) {
-    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, shortRestCount, isLoading: isShiftStatusLoading } = useShiftStatus(cadence?.id);
+    const { isActive: isShiftActive, startTime: activeShiftStartTime, lastShiftEndTime, shortRestCount, isLoading: isShiftStatusLoading, refetch: refetchShiftStatus } = useShiftStatus(cadence?.id);
+    const { register } = useActivityRefetch();
+
+    React.useEffect(() => {
+        return register(() => {
+            refetchShiftStatus();
+        });
+    }, [register, refetchShiftStatus]);
+
     const [duration, setDuration] = React.useState('00:00:00');
     const [api, setApi] = React.useState<CarouselApi>()
     

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     // Generate unique ID for database
     const fileId = crypto.randomUUID();
-    
+
     // Extract file extension and map .jpg -> .jpeg
     let ext = '.jpeg';
     const parts = file.name.split('.');
@@ -53,24 +53,26 @@ export async function POST(req: NextRequest) {
     );
 
     const existingNns = rows
-      .map(r => {
+      .map((r) => {
         const key = r.s3_key || '';
         const match = key.match(/roadsync\/\d{4}\/\d{6}(\d{2})\./);
         return match ? parseInt(match[1], 10) : 0;
       })
-      .filter(nn => nn > 0);
+      .filter((nn) => nn > 0);
 
     const maxNn = existingNns.length > 0 ? Math.max(...existingNns) : 0;
     const nextNn = (maxNn + 1).toString().padStart(2, '0');
     const s3Key = `${datePrefix}${nextNn}${ext}`;
 
     // Upload to S3 (Backblaze B2)
-    await s3.send(new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
-      Key: s3Key,
-      Body: buffer,
-      ContentType: file.type || 'application/octet-stream',
-    }));
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
+        Key: s3Key,
+        Body: buffer,
+        ContentType: file.type || 'application/octet-stream',
+      })
+    );
 
     // Save metadata in database with nullable data and filled s3_key
     await pool.query(
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
         file.type || 'application/octet-stream',
         file.size,
         null, // data is null for S3 files
-        s3Key
+        s3Key,
       ]
     );
 
