@@ -13,89 +13,118 @@ export default function FileViewerPage() {
   const { toast } = useToast();
 
   const [loading, setLoading] = React.useState(true);
-  const [isPdf, setIsPdf] = React.useState(false);
+  const [blob, setBlob] = React.useState<Blob | null>(null);
+  const [imgUrl, setImgUrl] = React.useState<string | null>(null);
+  const [failed, setFailed] = React.useState(false);
   const [sharing, setSharing] = React.useState(false);
   const [downloading, setDownloading] = React.useState(false);
+  const pagesRef = React.useRef<HTMLDivElement>(null);
 
-  const imageUrl = `/api/files/${id}`;
+  const fileUrl = `/api/files/${id}`;
+  const isPdf = !!blob && blob.type.includes('application/pdf');
 
+  // Load the file once (GET, with session cookie) and detect type from the real blob
   React.useEffect(() => {
-    // Probe content type
-    fetch(imageUrl, { method: 'HEAD' })
-      .then((res) => {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/pdf')) {
-          setIsPdf(true);
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(fileUrl, { credentials: 'same-origin' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const b = await res.blob();
+        if (cancelled) return;
+        setBlob(b);
+        if (!b.type.includes('application/pdf')) {
+          objectUrl = URL.createObjectURL(b);
+          setImgUrl(objectUrl);
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [imageUrl]);
+      } catch {
+        if (!cancelled) {
+          setFailed(true);
+          toast({ variant: 'destructive', title: 'Помилка', description: 'Не вдалося завантажити файл' });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileUrl]);
+
+  // Render PDF pages onto canvases (works in Android/Telegram WebView, no iframe needed)
+  React.useEffect(() => {
+    if (!isPdf || !blob) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        const pdf = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
+        const container = pagesRef.current;
+        if (!container) return;
+        container.innerHTML = '';
+        const width = container.clientWidth || 800;
+        const ratio = window.devicePixelRatio || 1;
+        for (let n = 1; n <= pdf.numPages && !cancelled; n++) {
+          const page = await pdf.getPage(n);
+          const base = page.getViewport({ scale: 1 });
+          const viewport = page.getViewport({ scale: (width / base.width) * ratio });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = '100%';
+          canvas.className = 'mb-2 rounded-md bg-white shadow-2xl';
+          container.appendChild(canvas);
+          await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+        }
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPdf, blob]);
+
+  const extOf = (b: Blob) => (b.type.split('/')[1] || 'jpg').split('+')[0];
 
   const handleShare = async () => {
+    if (!blob) return;
     setSharing(true);
     try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error('Не вдалося завантажити файл для спільного доступу');
-      const blob = await response.blob();
-      
-      // Determine file extension and mime type
       const mimeType = blob.type || 'image/jpeg';
-      const ext = mimeType.split('/')[1] || 'jpg';
-      const filename = `document-${id}.${ext}`;
-      
-      const file = new File([blob], filename, { type: mimeType });
-
+      const file = new File([blob], `document-${id}.${extOf(blob)}`, { type: mimeType });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Документ RoadSync',
-          text: 'Документ з каденції RoadSync',
-        });
+        await navigator.share({ files: [file], title: 'Документ RoadSync', text: 'Документ з каденції RoadSync' });
       } else {
-        // Fallback if file sharing not supported: share URL
-        await navigator.share({
-          url: window.location.href,
-          title: 'Документ RoadSync',
-        });
+        await navigator.share({ url: window.location.href, title: 'Документ RoadSync' });
       }
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Помилка надсилання',
-        description: err.message || 'Не вдалося поділитися файлом.',
-      });
+      if (err?.name !== 'AbortError') {
+        toast({ variant: 'destructive', title: 'Помилка надсилання', description: err.message || 'Не вдалося поділитися файлом.' });
+      }
     } finally {
       setSharing(false);
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
+    if (!blob) return;
     setDownloading(true);
     try {
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error('Не вдалося завантажити файл');
-      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      
-      const mimeType = blob.type || 'image/jpeg';
-      const ext = mimeType.split('/')[1] || 'jpg';
-      a.download = `document-${id}.${ext}`;
-      
+      a.download = `document-${id}.${extOf(blob)}`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Помилка завантаження',
-        description: err.message || 'Не вдалося зберегти файл.',
-      });
+      toast({ variant: 'destructive', title: 'Помилка завантаження', description: err.message || 'Не вдалося зберегти файл.' });
     } finally {
       setDownloading(false);
     }
@@ -103,71 +132,44 @@ export default function FileViewerPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-zinc-950 text-white selection:bg-zinc-800">
-      {/* Premium Header with blur effect */}
       <header className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800/50">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full"
-          >
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <span className="font-semibold text-sm tracking-wide text-zinc-200">Перегляд документа</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleShare}
-            disabled={sharing || loading}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full"
-            title="Поділитися"
-          >
+          <Button variant="ghost" size="icon" onClick={handleShare} disabled={sharing || loading || !blob} className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full" title="Поділитися">
             {sharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleDownload}
-            disabled={downloading || loading}
-            className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full"
-            title="Завантажити"
-          >
+          <Button variant="ghost" size="icon" onClick={handleDownload} disabled={downloading || loading || !blob} className="text-zinc-400 hover:text-white hover:bg-zinc-800/50 rounded-full" title="Завантажити">
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>
         </div>
       </header>
 
-      {/* Main Image or PDF Container */}
-      <main className="flex-1 flex items-center justify-center p-2 sm:p-4 relative overflow-hidden bg-zinc-950">
+      <main className="flex-1 flex items-start justify-center p-2 sm:p-4 relative bg-zinc-950">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 z-10">
             <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
           </div>
         )}
-        <div className="relative w-full h-[85vh] flex items-center justify-center max-w-4xl mx-auto rounded-lg overflow-hidden">
+        <div className="relative w-full max-w-4xl mx-auto">
           {isPdf ? (
-            <iframe
-              src={imageUrl}
-              title="PDF Документ"
-              className="w-full h-full rounded-md border border-zinc-800/40 bg-white"
-              onLoad={() => setLoading(false)}
-            />
+            <div ref={pagesRef} className="w-full" />
           ) : (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={imageUrl}
-              alt="Документ"
-              onLoad={() => setLoading(false)}
-              onError={() => {
-                setLoading(false);
-                toast({ variant: 'destructive', title: 'Помилка', description: 'Не вдалося відобразити зображення' });
-              }}
-              className="max-w-full max-h-[82vh] object-contain transition-all duration-500 ease-out animate-in fade-in zoom-in-95 rounded-md shadow-2xl border border-zinc-800/30"
-            />
+            imgUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={imgUrl}
+                alt="Документ"
+                onError={() => setFailed(true)}
+                className="mx-auto max-w-full max-h-[85vh] object-contain rounded-md shadow-2xl border border-zinc-800/30"
+              />
+            )
           )}
+          {failed && !loading && <p className="text-center text-sm text-zinc-400 py-10">Не вдалося відобразити документ</p>}
         </div>
       </main>
     </div>
