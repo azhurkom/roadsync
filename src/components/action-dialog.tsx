@@ -18,7 +18,7 @@ import { useShiftStatus } from '@/hooks/use-shift-status';
 import { useTrips } from '@/hooks/use-trips';
 import { useApi, apiMutate } from '@/hooks/use-api';
 import { useActivityRefetch } from '@/hooks/use-activity-refetch';
-import { Loader2, ArrowLeft, Clock, Wallet, ClipboardList, FilePlus, PlusCircle, Trash2, BrainCircuit } from 'lucide-react';
+import { Loader2, ArrowLeft, Clock, Wallet, ClipboardList, FilePlus, PlusCircle, Trash2, BrainCircuit, AlertTriangle } from 'lucide-react';
 
 interface ActionDialogProps {
   open: boolean;
@@ -40,6 +40,7 @@ const tripActionTranslations: Record<ActionType, string> = {
   'loading': 'Завантаження', 'unloading': 'Розвантаження',
   'trailer-change': 'Зміна причепа', 'vehicle-change': 'Зміна авто',
   'start-shift': 'Початок зміни', 'end-shift': 'Кінець зміни',
+  'incident': 'Інцидент / Подія',
 };
 
 // ─── NewTripForm ──────────────────────────────────────────────────────────────
@@ -541,9 +542,78 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   );
 }
 
+// ─── IncidentForm ─────────────────────────────────────────────────────────────
+function IncidentForm({ cadence, onFinished }: { cadence: Cadence; onFinished: () => void }) {
+  const { toast } = useToast();
+  const [tachographData, setTachographData] = React.useState<TachographData | null>(null);
+  const [notes, setNotes] = React.useState('');
+  const [photoUrls, setPhotoUrls] = React.useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tachographData?.odometer) {
+      toast({ variant: 'destructive', title: 'Помилка', description: 'Будь ласка, заповніть дані тахографа.' });
+      return;
+    }
+    if (!notes.trim()) {
+      toast({ variant: 'destructive', title: 'Помилка', description: 'Будь ласка, введіть короткий опис події.' });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await apiMutate('/api/action-logs', 'POST', {
+        cadenceId: cadence.id,
+        timestamp: new Date().toISOString(),
+        odometer: Number(tachographData.odometer),
+        locationLatitude: tachographData.coords?.lat || 0,
+        locationLongitude: tachographData.coords?.lon || 0,
+        locationName: tachographData.location,
+        actionType: 'incident',
+        notes: notes.trim(),
+        ...(photoUrls.length > 0 && { fileUrl: photoUrls.join(',') }),
+      });
+      toast({ title: 'Успіх!', description: 'Подію збережено.' });
+      onFinished();
+    } catch {
+      toast({ variant: 'destructive', title: 'Помилка', description: 'Не вдалося зберегти подію.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-2 pt-1">
+      <TachographInput onDataExtracted={setTachographData} />
+      <div className="space-y-1">
+        <Label htmlFor="incident-notes">Короткий опис події</Label>
+        <Textarea
+          id="incident-notes"
+          placeholder="напр., Пошкодження крила на паркінгу, ДТП..."
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          rows={3}
+          required
+        />
+      </div>
+      <PhotoInput
+        key="incident-photos"
+        multiple={true}
+        fileSuffix="inc"
+        onFilesUploaded={setPhotoUrls}
+        promptText="Фото події / ушкодження"
+        enableScanner={false}
+      />
+      <Button type="submit" className="w-full h-9" disabled={isSubmitting}>
+        {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Записати подію'}
+      </Button>
+    </form>
+  );
+}
+
 // ─── Main ActionDialog ────────────────────────────────────────────────────────
 export default function ActionDialog({ open, onOpenChange, cadence }: ActionDialogProps) {
-  const [view, setView] = React.useState<'main' | 'shift' | 'expense' | 'trip' | 'new-trip'>('main');
+  const [view, setView] = React.useState<'main' | 'shift' | 'expense' | 'trip' | 'new-trip' | 'incident'>('main');
   const { refetch } = useActivityRefetch();
 
   React.useEffect(() => { if (open) setView('main'); }, [open]);
@@ -557,12 +627,14 @@ export default function ActionDialog({ open, onOpenChange, cadence }: ActionDial
       case 'expense': return <ExpenseForm cadence={cadence} onFinished={handleFinished} />;
       case 'trip': return <TripActionForm cadence={cadence} onFinished={handleFinished} />;
       case 'new-trip': return <NewTripForm cadenceId={cadence.id} onFinished={handleFinished} />;
+      case 'incident': return <IncidentForm cadence={cadence} onFinished={handleFinished} />;
       default: return (
         <div className="grid grid-cols-2 gap-2 pt-2">
           <Button variant="secondary" className="h-20 flex-col gap-1" onClick={() => setView('shift')}><Clock className="h-6 w-6" /><span>Зміна</span></Button>
           <Button variant="secondary" className="h-20 flex-col gap-1" onClick={() => setView('expense')}><Wallet className="h-6 w-6" /><span>Витрати</span></Button>
           <Button variant="secondary" className="h-20 flex-col gap-1" onClick={() => setView('trip')}><ClipboardList className="h-6 w-6" /><span>Дія з рейсу</span></Button>
           <Button variant="secondary" className="h-20 flex-col gap-1" onClick={() => setView('new-trip')}><FilePlus className="h-6 w-6" /><span>Новий рейс</span></Button>
+          <Button variant="secondary" className="col-span-2 h-14 flex-row gap-2 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10" onClick={() => setView('incident')}><AlertTriangle className="h-5 w-5" /><span>Інцидент / Подія</span></Button>
         </div>
       );
     }
@@ -574,6 +646,7 @@ export default function ActionDialog({ open, onOpenChange, cadence }: ActionDial
       case 'expense': return 'Запис витрат';
       case 'trip': return 'Запис дії з рейсу';
       case 'new-trip': return 'Створити новий рейс';
+      case 'incident': return 'Запис події / інциденту';
       default: return 'Записати нову дію';
     }
   };

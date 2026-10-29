@@ -17,7 +17,7 @@ interface PhotoInputProps {
   enableScanner?: boolean;
   multiple?: boolean;
   /** Optional suffix for B2 S3 naming mask: 'tr' -> yymmddnn_tr.jpeg, 'lkw' -> yymmddnn_lkw.jpeg */
-  fileSuffix?: 'tr' | 'lkw';
+  fileSuffix?: 'tr' | 'lkw' | 'inc';
 }
 
 interface UploadedItem {

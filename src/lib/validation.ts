@@ -57,7 +57,7 @@ export const CreateActionLogSchema = z.object({
   locationLatitude: z.number(),
   locationLongitude: z.number(),
   locationName: z.string().min(1).max(200),
-  actionType: z.enum(['start-shift', 'end-shift', 'loading', 'unloading', 'trailer-change', 'vehicle-change']),
+  actionType: z.enum(['start-shift', 'end-shift', 'loading', 'unloading', 'trailer-change', 'vehicle-change', 'incident']),
   notes: z.string().max(1000).optional(),
   weight: z.number().int().min(0).max(100000).optional(),
   drivingTime: z.string().max(50).optional(),

@@ -27,6 +27,7 @@ const ACTION_LABELS: Record<string, string> = {
   'end-shift': 'Кінець зміни',
   'trailer-change': 'Зміна причепа',
   'vehicle-change': 'Зміна тягача',
+  'incident': 'Інцидент / Подія',
 };
 
 const ACTION_COLORS: Record<string, string> = {

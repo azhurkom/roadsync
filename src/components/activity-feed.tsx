@@ -6,7 +6,7 @@ import { useApi } from '@/hooks/use-api';
 import { useUser } from '@/hooks/use-user';
 import type { ActionLog, Expense, ActivityFeedItem } from '@/lib/types';
 import {
-  Fuel, Wrench, Download, Upload, Clock, Ban, Truck, WashingMachine, Wallet, LucideIcon, Calendar as CalendarIcon, FileText
+  Fuel, Wrench, Download, Upload, Clock, Ban, Truck, WashingMachine, Wallet, LucideIcon, Calendar as CalendarIcon, FileText, AlertTriangle
 } from 'lucide-react';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { uk } from 'date-fns/locale';
@@ -22,7 +22,7 @@ interface ActivityFeedProps { cadenceId: string; }
 
 const actionIcons: { [key: string]: LucideIcon } = {
   'loading': Download, 'unloading': Upload, 'start-shift': Clock,
-  'end-shift': Ban, 'trailer-change': Truck, 'vehicle-change': Wrench,
+  'end-shift': Ban, 'trailer-change': Truck, 'vehicle-change': Wrench, 'incident': AlertTriangle,
 };
 const expenseIcons: { [key: string]: LucideIcon } = {
   'паливо': Fuel, 'adblue': Fuel, 'мийка': WashingMachine, 'обслуговування': Wrench, 'інше': Wallet,
@@ -30,7 +30,7 @@ const expenseIcons: { [key: string]: LucideIcon } = {
 const actionTypeTranslations: { [key: string]: string } = {
   'loading': 'Завантаження', 'unloading': 'Розвантаження',
   'start-shift': 'Початок зміни', 'end-shift': 'Кінець зміни',
-  'trailer-change': 'Зміна причепа', 'vehicle-change': 'Зміна авто',
+  'trailer-change': 'Зміна причепа', 'vehicle-change': 'Зміна авто', 'incident': 'Інцидент / Подія',
   'паливо': 'Паливо', 'adblue': 'AdBlue', 'мийка': 'Мийка',
   'обслуговування': 'Обслуговування', 'інше': 'Інше',
 };
@@ -82,7 +82,7 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
       }
     } else {
       if (action.weight) detailsElements.push(<span key="weight">{action.weight} кг</span>);
-      if (action.notes) detailsElements.push(<span key="notes" className="ml-2">{action.notes}</span>);
+      if (action.notes) detailsElements.push(<span key="notes" className={action.weight ? 'ml-2' : ''}>{action.notes}</span>);
     }
   }
 
@@ -95,7 +95,7 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
         <div className="flex justify-between items-baseline">
           <div className="flex items-center gap-1.5">
             <p className="font-medium capitalize">{title}</p>
-            {action && (action.actionType === 'loading' || action.actionType === 'unloading' || action.actionType === 'trailer-change' || action.actionType === 'vehicle-change') && action.fileUrl && (() => {
+            {action && (action.actionType === 'loading' || action.actionType === 'unloading' || action.actionType === 'trailer-change' || action.actionType === 'vehicle-change' || action.actionType === 'incident') && action.fileUrl && (() => {
               const ids = action.fileUrl.split(',').map(u => u.trim().replace('/api/files/', '').replace('/files/', '')).filter(Boolean);
               const viewerHref = ids.length > 1 ? `/files/${ids[0]}?ids=${ids.join(',')}` : `/files/${ids[0]}`;
               return (
@@ -104,7 +104,7 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:text-primary/80 transition-colors inline-flex items-center"
-                  title={action.actionType === 'trailer-change' || action.actionType === 'vehicle-change' ? 'Переглянути фото дефекту' : 'Відкрити документ'}
+                  title={action.actionType === 'trailer-change' || action.actionType === 'vehicle-change' || action.actionType === 'incident' ? 'Переглянути фото' : 'Відкрити документ'}
                 >
                   <FileText className="w-4 h-4" />
                 </a>
@@ -158,7 +158,7 @@ export default function ActivityFeed({ cadenceId }: ActivityFeedProps) {
       case 'shift': items = items.filter(i => i.recordType === 'action' && ['start-shift', 'end-shift'].includes((i as ActionLog).actionType)); break;
       case 'trip': items = items.filter(i => i.recordType === 'action' && ['loading', 'unloading', 'trailer-change', 'vehicle-change'].includes((i as ActionLog).actionType)); break;
       case 'expense': items = items.filter(i => i.recordType === 'expense'); break;
-      case 'service': items = items.filter(i => (i.recordType === 'expense' && (i as Expense).type === 'обслуговування') || (i.recordType === 'action' && ['vehicle-change', 'trailer-change'].includes((i as ActionLog).actionType))); break;
+      case 'service': items = items.filter(i => (i.recordType === 'expense' && (i as Expense).type === 'обслуговування') || (i.recordType === 'action' && ['vehicle-change', 'trailer-change', 'incident'].includes((i as ActionLog).actionType))); break;
     }
     if (date?.from || date?.to) {
       const from = date.from ? startOfDay(date.from) : undefined;

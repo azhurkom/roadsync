@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     // Generate unique ID for database
     const fileId = crypto.randomUUID();
 
-    // Optional suffix (_tr or _lkw)
-    const suffix = rawSuffix === 'tr' || rawSuffix === 'lkw' ? `_${rawSuffix}` : '';
+    // Optional suffix (_tr, _lkw, or _inc)
+    const suffix = rawSuffix === 'tr' || rawSuffix === 'lkw' || rawSuffix === 'inc' ? `_${rawSuffix}` : '';
 
     // Extract file extension and map .jpg -> .jpeg
     let ext = '.jpeg';
