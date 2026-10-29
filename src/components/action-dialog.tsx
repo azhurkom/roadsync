@@ -385,13 +385,19 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
   const [notes, setNotes] = React.useState('');
   const [tachographData, setTachographData] = React.useState<TachographData | null>(null);
   const [fileUrl, setFileUrl] = React.useState<string | null>(null);
+  const [defectUrls, setDefectUrls] = React.useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLastUnload, setIsLastUnload] = React.useState(false);
   const [shouldCloseTrip, setShouldCloseTrip] = React.useState(true);
 
   React.useEffect(() => {
     if (actionType !== 'loading' && actionType !== 'unloading') setWeight('');
-    if (actionType !== 'trailer-change' && actionType !== 'vehicle-change') setNewNumber('');
+    if (actionType !== 'trailer-change' && actionType !== 'vehicle-change') {
+      setNewNumber('');
+      setDefectUrls([]);
+    } else {
+      setFileUrl(null);
+    }
 
     const checkLastUnload = async () => {
       if (actionType === 'unloading' && selectedTripId) {
@@ -430,7 +436,9 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
         tripId: selectedTripId,
         ...(weight && { weight: Number(weight) }),
         ...(notes && { notes }),
-        ...(fileUrl && { fileUrl }),
+        ...((actionType === 'trailer-change' || actionType === 'vehicle-change')
+          ? (defectUrls.length > 0 ? { fileUrl: defectUrls.join(',') } : {})
+          : (fileUrl ? { fileUrl } : {})),
       };
       if (actionType === 'trailer-change') { logPayload.newTrailerNumber = newNumber; logPayload.oldTrailerNumber = cadence.trailerNumber; }
       if (actionType === 'vehicle-change') { logPayload.newVehicleNumber = newNumber; logPayload.oldVehicleNumber = cadence.vehicleNumber; }
@@ -509,7 +517,23 @@ function TripActionForm({ cadence, onFinished }: { cadence: Cadence; onFinished:
           <Switch id="close-trip-toggle" checked={shouldCloseTrip} onCheckedChange={setShouldCloseTrip} />
         </div>
       )}
-      <PhotoInput onFileUploaded={setFileUrl} promptText="Додати фото документа" enableScanner={true} />
+      {(actionType === 'trailer-change' || actionType === 'vehicle-change') ? (
+        <PhotoInput
+          key={actionType}
+          multiple={true}
+          fileSuffix={actionType === 'trailer-change' ? 'tr' : 'lkw'}
+          onFilesUploaded={setDefectUrls}
+          promptText="Фото дефекту"
+          enableScanner={false}
+        />
+      ) : (
+        <PhotoInput
+          key="doc"
+          onFileUploaded={setFileUrl}
+          promptText="Додати фото документа"
+          enableScanner={true}
+        />
+      )}
       <Button type="submit" className="w-full h-9" disabled={isSubmitting || !selectedTripId}>
         {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : 'Записати дію'}
       </Button>

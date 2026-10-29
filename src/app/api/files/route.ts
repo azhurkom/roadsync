@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
+    const rawSuffix = formData.get('suffix') as string | null;
 
     if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     if (file.size > MAX_SIZE) return NextResponse.json({ error: 'File too large (max 10 MB)' }, { status: 413 });
@@ -26,15 +27,20 @@ export async function POST(req: NextRequest) {
     // Generate unique ID for database
     const fileId = crypto.randomUUID();
 
+    // Optional suffix (_tr or _lkw)
+    const suffix = rawSuffix === 'tr' || rawSuffix === 'lkw' ? `_${rawSuffix}` : '';
+
     // Extract file extension and map .jpg -> .jpeg
     let ext = '.jpeg';
-    const parts = file.name.split('.');
-    if (parts.length > 1) {
-      const fileExt = parts.pop()?.toLowerCase();
-      if (fileExt === 'jpg') {
-        ext = '.jpeg';
-      } else if (fileExt) {
-        ext = `.${fileExt}`;
+    if (!suffix) {
+      const parts = file.name.split('.');
+      if (parts.length > 1) {
+        const fileExt = parts.pop()?.toLowerCase();
+        if (fileExt === 'jpg') {
+          ext = '.jpeg';
+        } else if (fileExt) {
+          ext = `.${fileExt}`;
+        }
       }
     }
 
@@ -55,14 +61,18 @@ export async function POST(req: NextRequest) {
     const existingNns = rows
       .map((r) => {
         const key = r.s3_key || '';
-        const match = key.match(/roadsync\/\d{4}\/\d{6}(\d{2})\./);
+        const match = key.match(/roadsync\/\d{4}\/\d{6}(\d{2})(?:_[a-z0-9]+)?\./);
         return match ? parseInt(match[1], 10) : 0;
       })
       .filter((nn) => nn > 0);
 
     const maxNn = existingNns.length > 0 ? Math.max(...existingNns) : 0;
     const nextNn = (maxNn + 1).toString().padStart(2, '0');
-    const s3Key = `${datePrefix}${nextNn}${ext}`;
+    const baseFilename = `${yy}${mm}${dd}${nextNn}${suffix}${ext}`;
+    const s3Key = `roadsync/${yyyy}/${baseFilename}`;
+
+    const contentType = suffix ? 'image/jpeg' : (file.type || 'application/octet-stream');
+    const storedFilename = suffix ? baseFilename : file.name;
 
     // Upload to S3 (Backblaze B2)
     await s3.send(
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
         Bucket: process.env.S3_BUCKET_NAME || 'kom18-storage',
         Key: s3Key,
         Body: buffer,
-        ContentType: file.type || 'application/octet-stream',
+        ContentType: contentType,
       })
     );
 
@@ -81,15 +91,15 @@ export async function POST(req: NextRequest) {
       [
         fileId,
         userId,
-        file.name,
-        file.type || 'application/octet-stream',
+        storedFilename,
+        contentType,
         file.size,
         null, // data is null for S3 files
         s3Key,
       ]
     );
 
-    return NextResponse.json({ id: fileId, url: `/api/files/${fileId}` }, { status: 201 });
+    return NextResponse.json({ id: fileId, url: `/api/files/${fileId}`, filename: storedFilename }, { status: 201 });
   } catch (error: unknown) {
     const err = error as Error;
     console.error('File upload error:', err);

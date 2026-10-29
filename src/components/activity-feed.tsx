@@ -95,17 +95,21 @@ const ActivityItem = ({ item, allItems, itemIndex }: { item: ActivityFeedItem, a
         <div className="flex justify-between items-baseline">
           <div className="flex items-center gap-1.5">
             <p className="font-medium capitalize">{title}</p>
-            {action && (action.actionType === 'loading' || action.actionType === 'unloading' || action.actionType === 'trailer-change') && action.fileUrl && (
-              <a
-                href={action.fileUrl.replace('/api/files/', '/files/')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:text-primary/80 transition-colors inline-flex items-center"
-                title="Відкрити документ"
-              >
-                <FileText className="w-4 h-4" />
-              </a>
-            )}
+            {action && (action.actionType === 'loading' || action.actionType === 'unloading' || action.actionType === 'trailer-change' || action.actionType === 'vehicle-change') && action.fileUrl && (() => {
+              const ids = action.fileUrl.split(',').map(u => u.trim().replace('/api/files/', '').replace('/files/', '')).filter(Boolean);
+              const viewerHref = ids.length > 1 ? `/files/${ids[0]}?ids=${ids.join(',')}` : `/files/${ids[0]}`;
+              return (
+                <a
+                  href={viewerHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:text-primary/80 transition-colors inline-flex items-center"
+                  title={action.actionType === 'trailer-change' || action.actionType === 'vehicle-change' ? 'Переглянути фото дефекту' : 'Відкрити документ'}
+                >
+                  <FileText className="w-4 h-4" />
+                </a>
+              );
+            })()}
           </div>
           <p className="text-xs text-muted-foreground whitespace-nowrap">{formatTimestamp(item.timestamp)}</p>
         </div>
