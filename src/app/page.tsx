@@ -10,6 +10,7 @@ import { type CarouselApi } from '@/components/ui/carousel';
 import Header from '@/components/header';
 import DashboardClient from '@/components/dashboard-client';
 import AnalyticsClient from '@/components/analytics-client';
+import ForecastClient from '@/components/forecast-client';
 import TripsClient from '@/components/trips-client';
 import CadenceManager from '@/components/cadence-manager';
 import ActionDialog from '@/components/action-dialog';
@@ -98,6 +99,11 @@ export default function Home() {
                   <CarouselItem className="pl-0 h-full overflow-y-auto">
                     <div className="p-2 sm:p-4">
                       <AnalyticsClient cadence={activeCadence} />
+                    </div>
+                  </CarouselItem>
+                  <CarouselItem className="pl-0 h-full overflow-y-auto">
+                    <div className="p-2 sm:p-4">
+                      <ForecastClient cadence={activeCadence} />
                     </div>
                   </CarouselItem>
                 </CarouselContent>
