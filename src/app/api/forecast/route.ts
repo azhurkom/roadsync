@@ -69,10 +69,12 @@ export async function GET() {
 
     // Fetch all user's cadences
     const { rows: cadences } = await pool.query(
-      `SELECT id FROM cadences WHERE user_id = $1`,
+      `SELECT id, end_date FROM cadences WHERE user_id = $1 ORDER BY start_date DESC`,
       [userId]
     );
     const cadenceIds = cadences.map((c) => c.id);
+    const activeCadenceRow = cadences.find((c) => !c.end_date) || cadences[0];
+    const activeCadenceId = activeCadenceRow?.id;
     if (cadenceIds.length === 0) {
       return NextResponse.json({ error: 'No cadences found' }, { status: 404 });
     }
@@ -124,8 +126,8 @@ export async function GET() {
 
     // 2. Current driver state
     const lastLog = logs.length > 0 ? logs[logs.length - 1] : null;
-    const activeTrips = trips.filter((t) => !t.is_closed);
-    const activeTrip = activeTrips.length > 0 ? activeTrips[0] : null;
+    const activeTrips = trips.filter((t) => !t.is_closed && t.cadence_id === activeCadenceId);
+    const activeTrip = activeTrips.length > 0 ? activeTrips[activeTrips.length - 1] : null;
 
     // Determine if shift is currently active
     let activeShiftStart: string | null = null;
